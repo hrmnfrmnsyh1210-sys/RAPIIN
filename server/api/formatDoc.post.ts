@@ -1,6 +1,6 @@
 // API endpoint untuk format dokumen skripsi
-import { formatAndGenerateDocx } from "~/app/utils/formatter";
-import type { FormattingRules } from "~/app/utils/types";
+import { formatAndGenerateDocx } from "~/utils/formatter";
+import type { FormattingRules } from "~/utils/types";
 
 /**
  * POST /api/formatDoc

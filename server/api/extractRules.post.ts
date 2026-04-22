@@ -3,9 +3,9 @@ import {
   extractRulesFromAI,
   mergeWithDefaults,
   validateRules,
-} from "~/app/utils/llm";
-import { parseFile, cleanText } from "~/app/utils/parser";
-import type { FormattingRules } from "~/app/utils/types";
+} from "~/utils/llm";
+import { parseFile, cleanText } from "~/utils/parser";
+import type { FormattingRules } from "~/utils/types";
 
 /**
  * POST /api/extractRules

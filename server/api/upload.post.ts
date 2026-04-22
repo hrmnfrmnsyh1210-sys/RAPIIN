@@ -1,7 +1,7 @@
 // API endpoint untuk upload files
 import path from "path";
 import fs from "fs/promises";
-import type { UploadedFile } from "~/app/utils/types";
+import type { UploadedFile } from "~/utils/types";
 
 /**
  * POST /api/upload
