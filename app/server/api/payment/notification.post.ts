@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
   // Update status di Supabase
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    config.supabaseUrl,
     config.supabaseServiceKey
   );
 

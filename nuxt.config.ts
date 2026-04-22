@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   modules: ["@nuxtjs/tailwindcss", "@nuxtjs/supabase"],
 
   supabase: {
+    url: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+    key: process.env.NUXT_PUBLIC_SUPABASE_KEY || process.env.SUPABASE_KEY,
     redirectOptions: {
       login: "/login",
       callback: "/confirm",
@@ -25,7 +27,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || "",
+    supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    supabaseServiceKey: process.env.NUXT_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY || "",
     midtransServerKey: process.env.MIDTRANS_SERVER_KEY || "",
     public: {
       appName: "RAPIIN",

@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }>(event);
 
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    config.supabaseUrl,
     config.supabaseServiceKey
   );
 

@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
 
   // Simpan transaksi ke Supabase
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    config.supabaseUrl,
     config.supabaseServiceKey
   );
 
