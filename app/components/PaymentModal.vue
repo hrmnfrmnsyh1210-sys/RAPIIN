@@ -97,8 +97,8 @@ const handlePay = async () => {
         method: "POST",
         body: {
           userId: user.value.id,
-          userEmail: user.value.email,
-          userName: user.value.user_metadata?.full_name || user.value.email,
+          userEmail: user.value.email ?? user.value.user_metadata?.email ?? "",
+          userName: user.value.user_metadata?.full_name ?? user.value.email ?? "",
         },
       }
     );

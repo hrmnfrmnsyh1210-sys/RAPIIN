@@ -176,7 +176,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { FormattingRules } from "~/app/utils/types";
+import type { FormattingRules } from "~/utils/types";
 
 interface ProcessingResult {
   rules: FormattingRules;
