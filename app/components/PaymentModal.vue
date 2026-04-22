@@ -104,6 +104,11 @@ const handlePay = async () => {
     );
 
     // Open Midtrans Snap
+    if (!(window as any).snap) {
+      error.value = "Payment gateway belum siap. Refresh halaman dan coba lagi.";
+      loading.value = false;
+      return;
+    }
     (window as any).snap.pay(token, {
       onSuccess: () => {
         emit("success", orderId);
