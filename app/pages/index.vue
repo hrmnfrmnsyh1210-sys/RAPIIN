@@ -17,9 +17,24 @@
           <span class="text-lg font-bold tracking-tight">RAPIIN</span>
           <span class="rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-400 ring-1 ring-indigo-500/20">v1.0</span>
         </div>
-        <div class="flex items-center gap-6">
-          <a href="https://github.com" target="_blank" class="text-sm text-slate-400 transition hover:text-white">GitHub</a>
-          <a href="#docs" class="text-sm text-slate-400 transition hover:text-white">Docs</a>
+
+        <!-- User info -->
+        <div v-if="user" class="flex items-center gap-3">
+          <div class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+            <img
+              v-if="user.user_metadata?.avatar_url"
+              :src="user.user_metadata.avatar_url"
+              class="h-6 w-6 rounded-full"
+              alt="avatar"
+            />
+            <span class="text-sm text-slate-300">{{ user.user_metadata?.full_name || user.email }}</span>
+          </div>
+          <button
+            @click="signOut"
+            class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
+          >
+            Keluar
+          </button>
         </div>
       </div>
     </nav>
@@ -62,7 +77,7 @@
         </div>
       </div>
 
-      <!-- Processing Overlay -->
+      <!-- Processing -->
       <div v-if="isProcessing" class="mb-10">
         <div class="mx-auto max-w-lg rounded-2xl border border-white/5 bg-white/3 p-8 backdrop-blur-sm text-center">
           <div class="mb-5 flex justify-center">
@@ -147,6 +162,15 @@
         <p class="mt-1 text-xs text-slate-600">Rancang Bangun Sistem Otomatisasi Format Dokumen Skripsi &copy; 2026</p>
       </div>
     </footer>
+
+    <!-- Payment Modal -->
+    <PaymentModal
+      v-if="showPaymentModal && pendingFiles"
+      :guideline-name="pendingFiles.guideline.name"
+      :thesis-name="pendingFiles.thesis.name"
+      @success="handlePaymentSuccess"
+      @cancel="handlePaymentCancel"
+    />
   </div>
 </template>
 
@@ -160,13 +184,44 @@ interface ProcessingResult {
   documentBase64: string;
 }
 
+const supabase = useSupabaseClient();
+const user = useSupabaseUser();
+
 const currentResult = ref<ProcessingResult | null>(null);
 const isProcessing = ref(false);
 const error = ref("");
 const processingStep = ref("");
 const processingProgress = ref(0);
 
-const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
+const showPaymentModal = ref(false);
+const pendingFiles = ref<{ guideline: File; thesis: File } | null>(null);
+
+const signOut = async () => {
+  await supabase.auth.signOut();
+  await navigateTo("/login");
+};
+
+// Step 1: user submit form → tampilkan payment modal
+const handleFormSubmit = (files: { guideline: File; thesis: File }) => {
+  pendingFiles.value = files;
+  showPaymentModal.value = true;
+};
+
+// Step 2: pembayaran berhasil → mulai proses dokumen
+const handlePaymentSuccess = async (orderId: string) => {
+  showPaymentModal.value = false;
+  if (!pendingFiles.value) return;
+  await processDocuments(pendingFiles.value, orderId);
+};
+
+const handlePaymentCancel = () => {
+  showPaymentModal.value = false;
+};
+
+const processDocuments = async (
+  files: { guideline: File; thesis: File },
+  orderId: string
+) => {
   isProcessing.value = true;
   error.value = "";
   processingProgress.value = 0;
@@ -175,7 +230,6 @@ const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
     processingStep.value = "📖 Membaca panduan...";
     processingProgress.value = 20;
     await new Promise((r) => setTimeout(r, 500));
-
     const guidelineText = await readFile(files.guideline);
 
     processingStep.value = "🤖 Ekstrak aturan dari panduan...";
@@ -187,18 +241,15 @@ const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ guidelineText }),
     });
-
     if (!rulesResponse.ok) {
-      const errorData = await rulesResponse.json();
-      throw new Error(errorData.error || "Gagal ekstrak rules");
+      const e = await rulesResponse.json();
+      throw new Error(e.error || "Gagal ekstrak rules");
     }
-
     const { rules } = await rulesResponse.json();
 
     processingStep.value = "📝 Membaca dokumen skripsi...";
     processingProgress.value = 60;
     await new Promise((r) => setTimeout(r, 500));
-
     const thesisText = await readFile(files.thesis);
 
     processingStep.value = "✨ Format dokumen...";
@@ -210,18 +261,29 @@ const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ thesisText, rules }),
     });
-
     if (!formatResponse.ok) {
-      const errorData = await formatResponse.json();
-      throw new Error(errorData.error || "Gagal format dokumen");
+      const e = await formatResponse.json();
+      throw new Error(e.error || "Gagal format dokumen");
     }
-
     const { document: documentBase64 } = await formatResponse.json();
+
+    // Simpan job ke database
+    if (user.value) {
+      await $fetch("/api/payment/job", {
+        method: "POST",
+        body: {
+          userId: user.value.id,
+          orderId,
+          guidelineFilename: files.guideline.name,
+          thesisFilename: files.thesis.name,
+        },
+      }).catch(() => {});
+    }
 
     processingStep.value = "✅ Selesai!";
     processingProgress.value = 100;
-
     currentResult.value = { rules, thesisText, documentBase64 };
+    pendingFiles.value = null;
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Proses gagal";
   } finally {
@@ -236,12 +298,11 @@ const handleReset = () => {
   processingProgress.value = 0;
 };
 
-const readFile = async (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
+const readFile = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve((e.target?.result as string) || file.name);
     reader.onerror = reject;
     reader.readAsText(file);
   });
-};
 </script>
