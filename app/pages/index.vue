@@ -165,12 +165,12 @@
 
     <!-- Payment Modal -->
     <PaymentModal
-      v-if="showPaymentModal && pendingFiles && user"
+      v-if="showPaymentModal && pendingFiles && pendingUserId"
       :guideline-name="pendingFiles.guideline.name"
       :thesis-name="pendingFiles.thesis.name"
-      :user-id="user.id"
-      :user-email="user.email ?? user.user_metadata?.email ?? ''"
-      :user-name="user.user_metadata?.full_name ?? user.email ?? ''"
+      :user-id="pendingUserId"
+      :user-email="pendingUserEmail"
+      :user-name="pendingUserName"
       @success="handlePaymentSuccess"
       @cancel="handlePaymentCancel"
     />
@@ -198,14 +198,25 @@ const processingProgress = ref(0);
 
 const showPaymentModal = ref(false);
 const pendingFiles = ref<{ guideline: File; thesis: File } | null>(null);
+const pendingUserId = ref("");
+const pendingUserEmail = ref("");
+const pendingUserName = ref("");
 
 const signOut = async () => {
   await supabase.auth.signOut();
   await navigateTo("/login");
 };
 
-// Step 1: user submit form → tampilkan payment modal
-const handleFormSubmit = (files: { guideline: File; thesis: File }) => {
+// Step 1: user submit form → ambil session segar, tampilkan payment modal
+const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) {
+    error.value = "Sesi login tidak valid. Silakan refresh dan login ulang.";
+    return;
+  }
+  pendingUserId.value = session.user.id;
+  pendingUserEmail.value = session.user.email ?? session.user.user_metadata?.email ?? "";
+  pendingUserName.value = session.user.user_metadata?.full_name ?? session.user.email ?? "";
   pendingFiles.value = files;
   showPaymentModal.value = true;
 };
@@ -271,11 +282,11 @@ const processDocuments = async (
     const { document: documentBase64 } = await formatResponse.json();
 
     // Simpan job ke database
-    if (user.value) {
+    if (pendingUserId.value) {
       await $fetch("/api/payment/job", {
         method: "POST",
         body: {
-          userId: user.value.id,
+          userId: pendingUserId.value,
           orderId,
           guidelineFilename: files.guideline.name,
           thesisFilename: files.thesis.name,
