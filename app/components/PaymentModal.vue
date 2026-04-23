@@ -74,6 +74,9 @@
 const props = defineProps<{
   guidelineName: string;
   thesisName: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
 }>();
 
 const emit = defineEmits<{
@@ -81,12 +84,10 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const user = useSupabaseUser();
 const loading = ref(false);
 const error = ref("");
 
 const handlePay = async () => {
-  if (!user.value) return;
   loading.value = true;
   error.value = "";
 
@@ -96,9 +97,9 @@ const handlePay = async () => {
       {
         method: "POST",
         body: {
-          userId: user.value.id,
-          userEmail: user.value.email ?? user.value.user_metadata?.email ?? "",
-          userName: user.value.user_metadata?.full_name ?? user.value.email ?? "",
+          userId: props.userId,
+          userEmail: props.userEmail,
+          userName: props.userName,
         },
       }
     );

@@ -165,9 +165,12 @@
 
     <!-- Payment Modal -->
     <PaymentModal
-      v-if="showPaymentModal && pendingFiles"
+      v-if="showPaymentModal && pendingFiles && user"
       :guideline-name="pendingFiles.guideline.name"
       :thesis-name="pendingFiles.thesis.name"
+      :user-id="user.id"
+      :user-email="user.email ?? user.user_metadata?.email ?? ''"
+      :user-name="user.user_metadata?.full_name ?? user.email ?? ''"
       @success="handlePaymentSuccess"
       @cancel="handlePaymentCancel"
     />
