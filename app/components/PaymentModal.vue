@@ -125,8 +125,9 @@ const handlePay = async () => {
         loading.value = false;
       },
     });
-  } catch (err) {
-    error.value = "Gagal membuat transaksi. Coba lagi.";
+  } catch (err: any) {
+    const msg = err?.data?.message || err?.message || "Gagal membuat transaksi. Coba lagi.";
+    error.value = msg;
     loading.value = false;
   }
 };
