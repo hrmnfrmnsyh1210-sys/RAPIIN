@@ -1,10 +1,11 @@
-// LLM Integration dengan OpenAI
 import type { FormattingRules, RulesExtractionResponse } from "./types";
 
 const API_KEY =
-  process.env.NUXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-const API_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-4o-mini";
+  process.env.OPENAI_API_KEY || process.env.NUXT_PUBLIC_OPENAI_API_KEY;
+const BASE_URL =
+  process.env.LLM_BASE_URL || "https://api.openai.com/v1";
+const API_URL = `${BASE_URL}/chat/completions`;
+const MODEL = process.env.LLM_MODEL || "gpt-4o-mini";
 
 /**
  * Prompt template untuk ekstrak aturan formatting
@@ -65,6 +66,8 @@ export async function extractRulesFromAI(
       "OPENAI_API_KEY tidak ditemukan dalam environment variables",
     );
   }
+
+  console.log(`[LLM] Using model: ${MODEL} | base: ${BASE_URL}`);
 
   try {
     const prompt = buildPrompt(guidelineText);

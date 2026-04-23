@@ -27,6 +27,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
+    llmBaseUrl: process.env.LLM_BASE_URL || "https://api.openai.com/v1",
+    llmModel: process.env.LLM_MODEL || "gpt-4o-mini",
     supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
     supabaseServiceKey: process.env.NUXT_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY || "",
     midtransServerKey: process.env.MIDTRANS_SERVER_KEY || "",
