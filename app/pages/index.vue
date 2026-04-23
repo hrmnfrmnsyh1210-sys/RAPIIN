@@ -255,11 +255,11 @@ const processDocuments = async (
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ guidelineText: guidelineText.slice(0, 4000) }),
     });
-    if (!rulesResponse.ok) {
-      const e = await rulesResponse.json();
-      throw new Error(e.error || "Gagal ekstrak rules");
+    const rulesData = await rulesResponse.json();
+    if (!rulesResponse.ok || !rulesData.success) {
+      throw new Error(rulesData.error || "Gagal ekstrak rules");
     }
-    const { rules } = await rulesResponse.json();
+    const { rules } = rulesData;
 
     processingStep.value = "📝 Membaca dokumen skripsi...";
     processingProgress.value = 60;
@@ -275,11 +275,11 @@ const processDocuments = async (
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ thesisText, rules }),
     });
-    if (!formatResponse.ok) {
-      const e = await formatResponse.json();
-      throw new Error(e.error || "Gagal format dokumen");
+    const formatData = await formatResponse.json();
+    if (!formatResponse.ok || !formatData.success || !formatData.document) {
+      throw new Error(formatData.error || "Gagal format dokumen");
     }
-    const { document: documentBase64 } = await formatResponse.json();
+    const documentBase64 = formatData.document as string;
 
     // Simpan job ke database
     if (pendingUserId.value) {
@@ -312,11 +312,14 @@ const handleReset = () => {
   processingProgress.value = 0;
 };
 
-const readFile = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve((e.target?.result as string) || file.name);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
+const readFile = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/parseFile", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || "Gagal membaca isi file");
+  }
+  return data.text as string;
+};
 </script>
