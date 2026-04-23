@@ -97,10 +97,15 @@ export async function extractRulesFromAI(
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(
-        `OpenAI API Error: ${error.error?.message || response.statusText}`,
-      );
+      let errMsg = `${response.status} ${response.statusText}`;
+      try {
+        const errData = await response.json();
+        errMsg = errData?.error?.message || errData?.message || errMsg;
+      } catch {
+        const text = await response.text().catch(() => "");
+        if (text) errMsg = text.substring(0, 200);
+      }
+      throw new Error(`LLM API Error: ${errMsg}`);
     }
 
     const data = (await response.json()) as {
