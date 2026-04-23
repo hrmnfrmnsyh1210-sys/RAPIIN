@@ -253,7 +253,7 @@ const processDocuments = async (
     const rulesResponse = await fetch("/api/extractRules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guidelineText }),
+      body: JSON.stringify({ guidelineText: guidelineText.slice(0, 4000) }),
     });
     if (!rulesResponse.ok) {
       const e = await rulesResponse.json();
