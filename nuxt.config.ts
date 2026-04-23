@@ -23,6 +23,9 @@ export default defineNuxtConfig({
     prerender: {
       crawlLinks: false,
     },
+    serverOptions: {
+      maxRequestBodySize: 50 * 1024 * 1024, // 50MB
+    },
   },
 
   runtimeConfig: {
