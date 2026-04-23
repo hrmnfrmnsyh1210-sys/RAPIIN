@@ -9,7 +9,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "userId diperlukan" });
   }
 
-  if (!config.midtransServerKey) {
+  const key = config.midtransServerKey;
+  console.log("[payment/create] key length:", key.length, "| prefix:", key.substring(0, 15));
+
+  if (!key) {
     throw createError({ statusCode: 500, message: "Konfigurasi payment gateway belum lengkap" });
   }
 
