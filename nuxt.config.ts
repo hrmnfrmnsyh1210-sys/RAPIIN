@@ -19,6 +19,12 @@ export default defineNuxtConfig({
     configPath: "tailwind.config.ts",
   },
 
+  vite: {
+    optimizeDeps: {
+      include: ["pdfjs-dist"],
+    },
+  },
+
   nitro: {
     prerender: {
       crawlLinks: false,

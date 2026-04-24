@@ -35,12 +35,12 @@ export default defineEventHandler(async (event) => {
         body: JSON.stringify({
           transaction_details: {
             order_id: orderId,
-            gross_amount: 10000,
+            gross_amount: 15000,
           },
           item_details: [
             {
               id: "RAPIIN-FORMAT-DOC",
-              price: 10000,
+              price: 15000,
               quantity: 1,
               name: "Format Dokumen Skripsi",
             },
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
   const { error: dbError } = await supabase.from("transactions").insert({
     user_id: body.userId,
     order_id: orderId,
-    amount: 10000,
+    amount: 15000,
     status: "pending",
     snap_token: token,
     snap_redirect_url: redirect_url,

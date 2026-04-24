@@ -18,7 +18,7 @@
         <!-- Price -->
         <div class="mb-5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4 text-center">
           <p class="text-xs text-slate-400">Total yang dibayarkan</p>
-          <p class="mt-1 text-3xl font-extrabold text-indigo-300">Rp 10.000</p>
+          <p class="mt-1 text-3xl font-extrabold text-indigo-300">Rp 15.000</p>
           <p class="mt-1 text-xs text-slate-500">Sekali bayar per dokumen</p>
         </div>
 

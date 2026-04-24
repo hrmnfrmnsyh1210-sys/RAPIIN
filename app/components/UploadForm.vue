@@ -1,156 +1,146 @@
 <template>
   <div class="space-y-6">
-    <div class="mb-2">
-      <h2 class="text-xl font-bold text-white">Upload Dokumen</h2>
-      <p class="mt-1 text-sm text-slate-400">Upload dua file berikut untuk memulai proses formatting otomatis</p>
+    <div class="mb-2 animate-slide-up">
+      <h2 class="text-2xl font-black text-white" style="text-shadow: 2px 2px 0px #b45309;">
+        📂 Upload Dokumen
+      </h2>
+      <p class="mt-1 text-sm text-slate-300 font-medium">Upload dua file berikut untuk memulai proses formatting otomatis</p>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
       <!-- Upload Panduan -->
       <div
-        class="group relative rounded-xl border-2 border-dashed p-6 transition-all cursor-pointer"
+        class="upload-card upload-card-yellow relative rounded-2xl border-4 p-6 cursor-pointer animate-pop-in"
         :class="files.guideline
-          ? 'border-indigo-500/50 bg-indigo-500/5'
-          : 'border-white/10 bg-white/3 hover:border-indigo-500/40 hover:bg-indigo-500/5'"
+          ? 'border-yellow-400 bg-yellow-400/8'
+          : dragOver.guideline
+            ? 'border-yellow-400 bg-yellow-400/12 scale-105'
+            : 'border-white/20 bg-white/3 hover:border-yellow-400'"
+        style="animation-delay: 80ms;"
         @click="triggerGuidelineInput"
         @dragover.prevent="dragOver.guideline = true"
         @dragleave="dragOver.guideline = false"
         @drop.prevent="handleGuidanceDrop"
-        :data-drag="dragOver.guideline"
       >
-        <input
-          ref="guidelineInput"
-          type="file"
-          accept=".pdf"
-          class="hidden"
-          @change="handleGuidelineChange"
-        />
+        <input ref="guidelineInput" type="file" accept=".pdf" class="hidden" @change="handleGuidelineChange" />
 
-        <!-- Step badge -->
         <div class="mb-4 flex items-center justify-between">
-          <span class="rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-xs font-semibold text-indigo-400 ring-1 ring-indigo-500/25">
+          <span class="rounded-full border-2 border-yellow-400 bg-yellow-400/15 px-2.5 py-0.5 text-xs font-black text-yellow-400">
             Step 1
           </span>
-          <span class="text-xs text-slate-500">PDF · max 10MB</span>
+          <span class="text-xs font-bold text-slate-400">PDF · max 10MB</span>
         </div>
 
         <div v-if="!files.guideline" class="flex flex-col items-center text-center py-4">
-          <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 transition group-hover:bg-indigo-500/20">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p class="font-semibold text-white text-sm">Panduan Skripsi</p>
-          <p class="mt-1 text-xs text-slate-400">Klik atau seret file PDF panduan kampus</p>
+          <div class="mb-3 text-4xl" :class="dragOver.guideline ? 'animate-bounce' : ''">📄</div>
+          <p class="font-black text-white text-base">Panduan Skripsi</p>
+          <p class="mt-1 text-xs text-slate-400 font-medium">Klik atau seret file PDF panduan kampus</p>
         </div>
 
         <div v-else class="flex items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
+          <div class="text-3xl shrink-0 animate-pop-in">📄</div>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">{{ files.guideline.name }}</p>
-            <p class="text-xs text-slate-400">{{ formatSize(files.guideline.size) }}</p>
+            <p class="truncate text-sm font-black text-yellow-400">{{ files.guideline.name }}</p>
+            <p class="text-xs text-slate-400 font-medium">{{ formatSize(files.guideline.size) }}</p>
           </div>
-          <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-400">
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-          </div>
+          <Transition name="check">
+            <div
+              v-if="files.guideline"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-green-400 bg-green-400/15 text-green-400 font-black text-sm"
+            >
+              ✓
+            </div>
+          </Transition>
         </div>
       </div>
 
       <!-- Upload Skripsi -->
       <div
-        class="group relative rounded-xl border-2 border-dashed p-6 transition-all cursor-pointer"
+        class="upload-card upload-card-pink relative rounded-2xl border-4 p-6 cursor-pointer animate-pop-in"
         :class="files.thesis
-          ? 'border-violet-500/50 bg-violet-500/5'
-          : 'border-white/10 bg-white/3 hover:border-violet-500/40 hover:bg-violet-500/5'"
+          ? 'border-pink-400 bg-pink-400/8'
+          : dragOver.thesis
+            ? 'border-pink-400 bg-pink-400/12 scale-105'
+            : 'border-white/20 bg-white/3 hover:border-pink-400'"
+        style="animation-delay: 180ms;"
         @click="triggerThesisInput"
         @dragover.prevent="dragOver.thesis = true"
         @dragleave="dragOver.thesis = false"
         @drop.prevent="handleThesisDrop"
       >
-        <input
-          ref="thesisInput"
-          type="file"
-          accept=".docx"
-          class="hidden"
-          @change="handleThesisChange"
-        />
+        <input ref="thesisInput" type="file" accept=".docx" class="hidden" @change="handleThesisChange" />
 
         <div class="mb-4 flex items-center justify-between">
-          <span class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-semibold text-violet-400 ring-1 ring-violet-500/25">
+          <span class="rounded-full border-2 border-pink-400 bg-pink-400/15 px-2.5 py-0.5 text-xs font-black text-pink-400">
             Step 2
           </span>
-          <span class="text-xs text-slate-500">DOCX · max 20MB</span>
+          <span class="text-xs font-bold text-slate-400">DOCX · max 20MB</span>
         </div>
 
         <div v-if="!files.thesis" class="flex flex-col items-center text-center py-4">
-          <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 transition group-hover:bg-violet-500/20">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </div>
-          <p class="font-semibold text-white text-sm">Dokumen Skripsi</p>
-          <p class="mt-1 text-xs text-slate-400">Klik atau seret file DOCX skripsi Anda</p>
+          <div class="mb-3 text-4xl" :class="dragOver.thesis ? 'animate-bounce' : ''">📝</div>
+          <p class="font-black text-white text-base">Dokumen Skripsi</p>
+          <p class="mt-1 text-xs text-slate-400 font-medium">Klik atau seret file DOCX skripsi Anda</p>
         </div>
 
         <div v-else class="flex items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </div>
+          <div class="text-3xl shrink-0 animate-pop-in">📝</div>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">{{ files.thesis.name }}</p>
-            <p class="text-xs text-slate-400">{{ formatSize(files.thesis.size) }}</p>
+            <p class="truncate text-sm font-black text-pink-400">{{ files.thesis.name }}</p>
+            <p class="text-xs text-slate-400 font-medium">{{ formatSize(files.thesis.size) }}</p>
           </div>
-          <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-400">
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-          </div>
+          <Transition name="check">
+            <div
+              v-if="files.thesis"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-green-400 bg-green-400/15 text-green-400 font-black text-sm"
+            >
+              ✓
+            </div>
+          </Transition>
         </div>
       </div>
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3">
-      <svg class="h-4 w-4 shrink-0 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-      </svg>
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <Transition name="error">
+      <div
+        v-if="error"
+        class="flex items-center gap-2 rounded-xl border-2 border-red-400 bg-red-500/10 px-4 py-3"
+        style="box-shadow: 4px 4px 0px #7f1d1d;"
+      >
+        <span class="text-lg shrink-0">⚠️</span>
+        <p class="text-sm font-bold text-red-400">{{ error }}</p>
+      </div>
+    </Transition>
 
     <!-- Actions -->
-    <div class="flex gap-3 pt-2">
+    <div class="flex gap-3 pt-2 animate-slide-up" style="animation-delay: 280ms;">
       <button
         @click="handleSubmit"
         :disabled="!isFormValid"
-        class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+        class="btn-submit flex flex-1 items-center justify-center gap-2 rounded-xl border-4 border-yellow-400 bg-yellow-400 px-6 py-3.5 font-black text-black text-base transition-all duration-200 hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-40 disabled:translate-y-0"
+        :class="{ 'btn-glow': isFormValid }"
       >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        Proses Sekarang
+        ⚡ Proses Sekarang
       </button>
 
-      <button
-        v-if="files.guideline || files.thesis"
-        @click="handleReset"
-        class="rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
-      >
-        Reset
-      </button>
+      <Transition name="reset-btn">
+        <button
+          v-if="files.guideline || files.thesis"
+          @click="handleReset"
+          class="reset-btn rounded-xl border-4 border-white/20 bg-white/5 px-5 py-3.5 text-sm font-black text-slate-300 transition-all duration-200 hover:border-red-400/60 hover:text-red-400 hover:-translate-y-1"
+        >
+          Reset
+        </button>
+      </Transition>
     </div>
 
     <!-- Hint -->
-    <p v-if="!isFormValid" class="text-center text-xs text-slate-500">
-      Upload kedua file untuk mengaktifkan tombol proses
-    </p>
+    <Transition name="hint">
+      <p v-if="!isFormValid" class="text-center text-xs font-bold text-slate-500 animate-slide-up" style="animation-delay: 350ms;">
+        Upload kedua file untuk mengaktifkan tombol proses 👆
+      </p>
+    </Transition>
   </div>
 </template>
 
@@ -224,3 +214,100 @@ const handleReset = () => {
   error.value = "";
 };
 </script>
+
+<style scoped>
+/* ── Upload card hover physics ───────────────────────── */
+.upload-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.upload-card-yellow {
+  box-shadow: 5px 5px 0px rgba(180, 83, 9, 0.5);
+}
+.upload-card-yellow:hover {
+  transform: translateY(-5px);
+  box-shadow: 8px 9px 0px #b45309;
+}
+.upload-card-pink {
+  box-shadow: 5px 5px 0px rgba(157, 23, 77, 0.5);
+}
+.upload-card-pink:hover {
+  transform: translateY(-5px);
+  box-shadow: 8px 9px 0px #9d174d;
+}
+
+/* ── Submit button glow when active ──────────────────── */
+.btn-submit {
+  box-shadow: 5px 5px 0px #b45309;
+}
+.btn-glow {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 5px 5px 0px #b45309; }
+  50%       { box-shadow: 5px 5px 0px #b45309, 0 0 28px rgba(250, 204, 21, 0.55); }
+}
+
+/* ── Reset button ────────────────────────────────────── */
+.reset-btn {
+  box-shadow: 4px 4px 0px rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.reset-btn:hover {
+  box-shadow: 5px 5px 0px rgba(248, 113, 113, 0.3);
+}
+
+/* ── Check bounce-in ─────────────────────────────────── */
+.check-enter-active {
+  animation: checkIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.check-leave-active {
+  animation: checkOut 0.2s ease both;
+}
+@keyframes checkIn {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.35) rotate(5deg); opacity: 1; }
+  80%  { transform: scale(0.85) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes checkOut {
+  to { transform: scale(0); opacity: 0; }
+}
+
+/* ── Error shake ─────────────────────────────────────── */
+.error-enter-active {
+  animation: errorShake 0.5s ease both;
+}
+.error-leave-active {
+  animation: errorFade 0.2s ease both;
+}
+@keyframes errorShake {
+  0%       { transform: translateX(-10px); opacity: 0; }
+  20%      { opacity: 1; }
+  30%, 70% { transform: translateX(-6px); }
+  50%, 90% { transform: translateX(6px); }
+  100%     { transform: translateX(0); opacity: 1; }
+}
+@keyframes errorFade {
+  to { transform: translateX(8px); opacity: 0; }
+}
+
+/* ── Reset button pop-in ─────────────────────────────── */
+.reset-btn-enter-active {
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.reset-btn-leave-active {
+  animation: popOut 0.2s ease both;
+}
+@keyframes popIn {
+  from { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes popOut {
+  to { transform: scale(0.5); opacity: 0; }
+}
+
+/* ── Hint fade ───────────────────────────────────────── */
+.hint-enter-active { transition: opacity 0.3s ease; }
+.hint-leave-active { transition: opacity 0.2s ease; }
+.hint-enter-from, .hint-leave-to { opacity: 0; }
+</style>
