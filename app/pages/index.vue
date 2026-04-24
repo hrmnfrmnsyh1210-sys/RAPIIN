@@ -21,29 +21,29 @@
     </div>
 
     <!-- Navbar -->
-    <nav class="relative z-10 border-b-4 border-yellow-400 bg-[#0d0a2e]/90 backdrop-blur-xl">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <div class="flex items-center gap-3">
-          <div class="logo-icon flex h-10 w-10 items-center justify-center rounded-xl border-4 border-yellow-400 bg-yellow-400 font-black text-black text-lg">
+    <nav class="fixed top-0 left-0 right-0 z-50 w-full border-b-4 border-yellow-400 bg-[#0d0a2e]/90 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="logo-icon flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border-4 border-yellow-400 bg-yellow-400 font-black text-black text-base sm:text-lg">
             R
           </div>
-          <span class="text-xl font-black tracking-tight text-white" style="text-shadow: 2px 2px 0px #b45309;">RAPIIN</span>
-          <span class="rounded-full border-2 border-yellow-400 bg-yellow-400/15 px-2.5 py-0.5 text-xs font-black text-yellow-400 animate-float" style="animation-duration: 4s;">v1.0</span>
+          <span class="text-lg sm:text-xl font-black tracking-tight text-white" style="text-shadow: 2px 2px 0px #b45309;">RAPIIN</span>
+          <span class="hidden sm:inline-block rounded-full border-2 border-yellow-400 bg-yellow-400/15 px-2.5 py-0.5 text-xs font-black text-yellow-400 animate-float" style="animation-duration: 4s;">v1.0</span>
         </div>
 
-        <div v-if="user" class="flex items-center gap-3">
-          <div class="flex items-center gap-2 rounded-xl border-2 border-white/20 bg-white/5 px-3 py-1.5">
+        <div v-if="user" class="flex items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 rounded-xl border-2 border-white/20 bg-white/5 px-2 sm:px-3 py-1.5 min-w-0 max-w-[120px] sm:max-w-[220px]">
             <img
               v-if="user.user_metadata?.avatar_url"
               :src="user.user_metadata.avatar_url"
-              class="h-6 w-6 rounded-full border-2 border-yellow-400"
+              class="h-6 w-6 rounded-full border-2 border-yellow-400 shrink-0"
               alt="avatar"
             />
-            <span class="text-sm font-bold text-slate-200">{{ user.user_metadata?.full_name || user.email }}</span>
+            <span class="text-xs sm:text-sm font-bold text-slate-200 truncate">{{ user.user_metadata?.full_name || user.email }}</span>
           </div>
           <button
             @click="signOut"
-            class="rounded-xl border-2 border-white/20 bg-white/5 px-4 py-1.5 text-xs font-bold text-slate-300 transition-all duration-200 hover:border-red-400 hover:text-red-400 hover:scale-105"
+            class="rounded-xl border-2 border-white/20 bg-white/5 px-3 sm:px-4 py-1.5 text-xs font-bold text-slate-300 transition-all duration-200 hover:border-red-400 hover:text-red-400 hover:scale-105 whitespace-nowrap shrink-0"
           >
             Keluar
           </button>
@@ -51,7 +51,7 @@
       </div>
     </nav>
 
-    <main class="relative z-10 mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <main class="relative z-10 mx-auto max-w-6xl px-4 pt-[76px] pb-12 sm:pt-[84px] sm:pb-12 sm:px-6 lg:px-8">
 
       <!-- Animated section switcher: upload / processing / result -->
       <Transition name="section" mode="out-in">
