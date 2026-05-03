@@ -25,7 +25,7 @@
           style="box-shadow: 3px 3px 0px #b45309;"
         >
           <span class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
-          ✨ Format Skripsi Otomatis
+          ✨ Format Skripsi & Jurnal Otomatis
         </div>
       </div>
 
@@ -40,7 +40,7 @@
             </div>
           </div>
           <h1 class="text-3xl font-black text-white" style="text-shadow: 3px 3px 0px #b45309;">RAPIIN</h1>
-          <p class="mt-2 text-sm text-slate-300 font-medium">Rapikan skripsi otomatis dengan kekuatan AI</p>
+          <p class="mt-2 text-sm text-slate-300 font-medium">Rapikan skripsi & jurnal otomatis dengan kekuatan AI</p>
 
           <!-- Feature pills -->
           <div class="mt-4 flex justify-center gap-2 flex-wrap">

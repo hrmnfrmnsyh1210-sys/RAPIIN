@@ -4,11 +4,58 @@
       <h2 class="text-2xl font-black text-white" style="text-shadow: 2px 2px 0px #b45309;">
         📂 Upload Dokumen
       </h2>
-      <p class="mt-1 text-sm text-slate-300 font-medium">Upload dua file berikut untuk memulai proses formatting otomatis</p>
+      <p class="mt-1 text-sm text-slate-300 font-medium">Pilih jenis dokumen dan upload file untuk memulai proses formatting otomatis</p>
     </div>
 
+    <!-- ── Document Type Selector ─────────────────────────── -->
+    <div class="animate-slide-up" style="animation-delay: 40ms;">
+      <p class="mb-3 text-xs font-black uppercase tracking-widest text-slate-400">Jenis Dokumen</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          @click="documentType = 'skripsi'"
+          class="type-btn group relative rounded-xl border-4 p-4 text-left transition-all duration-200"
+          :class="documentType === 'skripsi'
+            ? 'border-yellow-400 bg-yellow-400/10 shadow-[5px_5px_0px_#b45309]'
+            : 'border-white/15 bg-white/3 hover:border-yellow-400/50 shadow-[3px_3px_0px_rgba(255,255,255,0.05)]'"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">🎓</span>
+            <div>
+              <p class="font-black text-base" :class="documentType === 'skripsi' ? 'text-yellow-400' : 'text-white'">Skripsi</p>
+              <p class="text-xs text-slate-400 font-medium">Tugas akhir, tesis, disertasi</p>
+            </div>
+          </div>
+          <div
+            v-if="documentType === 'skripsi'"
+            class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-yellow-400 bg-yellow-400 text-black text-xs font-black animate-pop-in"
+          >✓</div>
+        </button>
+
+        <button
+          @click="documentType = 'jurnal'"
+          class="type-btn group relative rounded-xl border-4 p-4 text-left transition-all duration-200"
+          :class="documentType === 'jurnal'
+            ? 'border-cyan-400 bg-cyan-400/10 shadow-[5px_5px_0px_#0e7490]'
+            : 'border-white/15 bg-white/3 hover:border-cyan-400/50 shadow-[3px_3px_0px_rgba(255,255,255,0.05)]'"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">📰</span>
+            <div>
+              <p class="font-black text-base" :class="documentType === 'jurnal' ? 'text-cyan-400' : 'text-white'">Jurnal</p>
+              <p class="text-xs text-slate-400 font-medium">Paper ilmiah, artikel jurnal</p>
+            </div>
+          </div>
+          <div
+            v-if="documentType === 'jurnal'"
+            class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-400 text-black text-xs font-black animate-pop-in"
+          >✓</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── File Upload Cards ──────────────────────────────── -->
     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <!-- Upload Panduan -->
+      <!-- Upload Panduan / Template -->
       <div
         class="upload-card upload-card-yellow relative rounded-2xl border-4 p-6 cursor-pointer animate-pop-in"
         :class="files.guideline
@@ -33,8 +80,8 @@
 
         <div v-if="!files.guideline" class="flex flex-col items-center text-center py-4">
           <div class="mb-3 text-4xl" :class="dragOver.guideline ? 'animate-bounce' : ''">📄</div>
-          <p class="font-black text-white text-base">Panduan Skripsi</p>
-          <p class="mt-1 text-xs text-slate-400 font-medium">Klik atau seret file PDF panduan kampus</p>
+          <p class="font-black text-white text-base">{{ guidelineLabel }}</p>
+          <p class="mt-1 text-xs text-slate-400 font-medium">{{ guidelineHint }}</p>
         </div>
 
         <div v-else class="flex items-center gap-3">
@@ -54,7 +101,7 @@
         </div>
       </div>
 
-      <!-- Upload Skripsi -->
+      <!-- Upload Dokumen -->
       <div
         class="upload-card upload-card-pink relative rounded-2xl border-4 p-6 cursor-pointer animate-pop-in"
         :class="files.thesis
@@ -79,8 +126,8 @@
 
         <div v-if="!files.thesis" class="flex flex-col items-center text-center py-4">
           <div class="mb-3 text-4xl" :class="dragOver.thesis ? 'animate-bounce' : ''">📝</div>
-          <p class="font-black text-white text-base">Dokumen Skripsi</p>
-          <p class="mt-1 text-xs text-slate-400 font-medium">Klik atau seret file DOCX skripsi Anda</p>
+          <p class="font-black text-white text-base">{{ documentLabel }}</p>
+          <p class="mt-1 text-xs text-slate-400 font-medium">{{ documentHint }}</p>
         </div>
 
         <div v-else class="flex items-center gap-3">
@@ -146,19 +193,39 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import type { DocumentType } from "~/utils/types";
 
 const emit = defineEmits<{
-  submit: [files: { guideline: File; thesis: File }];
+  submit: [payload: { guideline: File; thesis: File; documentType: DocumentType }];
 }>();
 
 const guidelineInput = ref<HTMLInputElement | null>(null);
 const thesisInput = ref<HTMLInputElement | null>(null);
 
+const documentType = ref<DocumentType>("skripsi");
 const files = ref({ guideline: null as File | null, thesis: null as File | null });
 const error = ref("");
 const dragOver = ref({ guideline: false, thesis: false });
 
 const isFormValid = computed(() => files.value.guideline && files.value.thesis);
+
+// Dynamic labels based on document type
+const guidelineLabel = computed(() =>
+  documentType.value === "jurnal" ? "Template / Panduan Jurnal" : "Panduan Skripsi",
+);
+const guidelineHint = computed(() =>
+  documentType.value === "jurnal"
+    ? "Klik atau seret file PDF template/panduan jurnal"
+    : "Klik atau seret file PDF panduan kampus",
+);
+const documentLabel = computed(() =>
+  documentType.value === "jurnal" ? "Naskah Jurnal" : "Dokumen Skripsi",
+);
+const documentHint = computed(() =>
+  documentType.value === "jurnal"
+    ? "Klik atau seret file DOCX naskah jurnal Anda"
+    : "Klik atau seret file DOCX skripsi Anda",
+);
 
 const formatSize = (bytes: number) => {
   if (bytes < 1024) return bytes + " B";
@@ -180,7 +247,7 @@ const handleGuidelineChange = (e: Event) => {
 const handleThesisChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  if (file.size > 20 * 1024 * 1024) { error.value = "File skripsi terlalu besar (max 20MB)"; return; }
+  if (file.size > 20 * 1024 * 1024) { error.value = "File dokumen terlalu besar (max 20MB)"; return; }
   files.value.thesis = file;
   error.value = "";
 };
@@ -197,15 +264,19 @@ const handleGuidanceDrop = (e: DragEvent) => {
 const handleThesisDrop = (e: DragEvent) => {
   dragOver.value.thesis = false;
   const file = e.dataTransfer?.files?.[0];
-  if (!file || !file.name.endsWith(".docx")) { error.value = "Hanya file DOCX yang diterima untuk skripsi"; return; }
-  if (file.size > 20 * 1024 * 1024) { error.value = "File skripsi terlalu besar (max 20MB)"; return; }
+  if (!file || !file.name.endsWith(".docx")) { error.value = "Hanya file DOCX yang diterima untuk dokumen"; return; }
+  if (file.size > 20 * 1024 * 1024) { error.value = "File dokumen terlalu besar (max 20MB)"; return; }
   files.value.thesis = file;
   error.value = "";
 };
 
 const handleSubmit = () => {
   if (!isFormValid.value) return;
-  emit("submit", files.value as { guideline: File; thesis: File });
+  emit("submit", {
+    guideline: files.value.guideline!,
+    thesis: files.value.thesis!,
+    documentType: documentType.value,
+  });
 };
 
 const handleReset = () => {
@@ -216,6 +287,14 @@ const handleReset = () => {
 </script>
 
 <style scoped>
+/* ── Type selector hover ────────────────────────────────── */
+.type-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.type-btn:hover {
+  transform: translateY(-3px);
+}
+
 /* ── Upload card hover physics ───────────────────────── */
 .upload-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;

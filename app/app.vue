@@ -15,7 +15,7 @@ useHead({
     {
       name: "description",
       content:
-        "Sistem otomasi format dokumen skripsi berbasis AI. Upload panduan dan dokumen, AI akan membaca aturan dan format otomatis.",
+        "Sistem otomasi format dokumen skripsi & jurnal berbasis AI. Upload panduan/template dan dokumen, AI akan membaca aturan dan format otomatis.",
     },
     { name: "theme-color", content: "#3B82F6" },
   ],

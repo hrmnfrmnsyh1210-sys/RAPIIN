@@ -1,11 +1,12 @@
-// API endpoint untuk ekstrak aturan dari panduan
+// API endpoint untuk ekstrak aturan dari panduan (Skripsi + Jurnal)
 import {
-  extractRulesFromAI,
-  mergeWithDefaults,
+  extractRulesByType,
+  mergeRulesByType,
   validateRules,
+  validateJournalRules,
 } from "~/utils/llm";
-import { parseFile, cleanText } from "~/utils/parser";
-import type { FormattingRules } from "~/utils/types";
+import { cleanText } from "~/utils/parser";
+import type { DocumentType, AnyFormattingRules } from "~/utils/types";
 
 /**
  * POST /api/extractRules
@@ -13,12 +14,16 @@ import type { FormattingRules } from "~/utils/types";
  *
  * Body:
  * {
- *   guidelineText: string (text hasil parsing dari PDF panduan)
+ *   guidelineText: string (text hasil parsing dari PDF panduan),
+ *   documentType?: 'skripsi' | 'jurnal'   // default: 'skripsi'
  * }
  */
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody<{ guidelineText: string }>(event);
+    const body = await readBody<{
+      guidelineText: string;
+      documentType?: DocumentType;
+    }>(event);
 
     if (!body?.guidelineText) {
       return {
@@ -26,6 +31,8 @@ export default defineEventHandler(async (event) => {
         error: "guidelineText diperlukan",
       };
     }
+
+    const docType: DocumentType = body.documentType || "skripsi";
 
     // Clean text untuk LLM
     const cleanedText = cleanText(body.guidelineText);
@@ -37,28 +44,39 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    console.log(`Mengekstrak rules dari text ${cleanedText.length} chars...`);
+    console.log(
+      `Mengekstrak rules [${docType}] dari text ${cleanedText.length} chars...`,
+    );
 
-    // Call LLM untuk ekstrak aturan
-    const extractedRules = await extractRulesFromAI(cleanedText.slice(0, 3000)); // Limit untuk API
+    // Call LLM untuk ekstrak aturan berdasarkan tipe dokumen
+    const extractedRules = await extractRulesByType(
+      cleanedText.slice(0, 4000),
+      docType,
+    );
 
     // Validate rules
-    if (!validateRules(extractedRules)) {
-      console.warn("Rules tidak valid, merge dengan defaults");
+    if (docType === "jurnal") {
+      if (!validateJournalRules(extractedRules as any)) {
+        console.warn("Journal rules tidak valid, merge dengan defaults");
+      }
+    } else {
+      if (!validateRules(extractedRules as any)) {
+        console.warn("Skripsi rules tidak valid, merge dengan defaults");
+      }
     }
 
     // Merge dengan defaults
-    const finalRules = mergeWithDefaults(extractedRules);
+    const finalRules = mergeRulesByType(extractedRules, docType);
 
     return {
       success: true,
       rules: finalRules,
-      message: "Rules berhasil diekstrak dari panduan",
+      documentType: docType,
+      message: `Rules berhasil diekstrak dari panduan ${docType}`,
     };
   } catch (error) {
     console.error("Extract rules error:", error);
 
-    // Return error dengan pesan yang informatif
     const errorMessage =
       error instanceof Error ? error.message : "Ekstrak rules gagal";
 

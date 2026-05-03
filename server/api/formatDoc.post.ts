@@ -1,22 +1,27 @@
-// API endpoint untuk format dokumen skripsi
-import { formatAndGenerateDocx } from "~/utils/formatter";
-import type { FormattingRules } from "~/utils/types";
+// API endpoint untuk format dokumen (Skripsi + Jurnal)
+import { formatAndGenerateByType } from "~/utils/formatter";
+import type {
+  DocumentType,
+  AnyFormattingRules,
+} from "~/utils/types";
 
 /**
  * POST /api/formatDoc
- * Format dokumen skripsi dengan rules yang sudah diekstrak
+ * Format dokumen dengan rules yang sudah diekstrak
  *
  * Body:
  * {
- *   thesisText: string (text dari dokumen skripsi),
- *   rules: FormattingRules (rules hasil ekstrak)
+ *   thesisText: string        (text dari dokumen),
+ *   rules: AnyFormattingRules (rules hasil ekstrak),
+ *   documentType?: 'skripsi' | 'jurnal'   // default: 'skripsi'
  * }
  */
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<{
       thesisText: string;
-      rules: FormattingRules;
+      rules: AnyFormattingRules;
+      documentType?: DocumentType;
     }>(event);
 
     if (!body?.thesisText) {
@@ -41,10 +46,15 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    console.log("Memformat dokumen dengan rules:", body.rules);
+    const docType: DocumentType = body.documentType || "skripsi";
+    console.log(`Memformat dokumen [${docType}] dengan rules:`, body.rules);
 
-    // Generate formatted document
-    const docxBuffer = await formatAndGenerateDocx(body.thesisText, body.rules);
+    // Generate formatted document berdasarkan tipe
+    const docxBuffer = await formatAndGenerateByType(
+      body.thesisText,
+      body.rules,
+      docType,
+    );
 
     // Convert buffer ke base64 untuk transfer via HTTP
     const base64 = docxBuffer.toString("base64");
@@ -53,7 +63,8 @@ export default defineEventHandler(async (event) => {
       success: true,
       document: base64,
       size: docxBuffer.length,
-      message: "Dokumen berhasil diformat",
+      documentType: docType,
+      message: `Dokumen ${docType} berhasil diformat`,
     };
   } catch (error) {
     console.error("Format doc error:", error);

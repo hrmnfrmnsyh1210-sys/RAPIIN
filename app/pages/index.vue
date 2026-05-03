@@ -28,7 +28,7 @@
             R
           </div>
           <span class="text-lg sm:text-xl font-black tracking-tight text-white" style="text-shadow: 2px 2px 0px #b45309;">RAPIIN</span>
-          <span class="hidden sm:inline-block rounded-full border-2 border-yellow-400 bg-yellow-400/15 px-2.5 py-0.5 text-xs font-black text-yellow-400 animate-float" style="animation-duration: 4s;">v1.0</span>
+          <span class="hidden sm:inline-block rounded-full border-2 border-yellow-400 bg-yellow-400/15 px-2.5 py-0.5 text-xs font-black text-yellow-400 animate-float" style="animation-duration: 4s;">v2.0</span>
         </div>
 
         <div v-if="user" class="flex items-center gap-2 sm:gap-3">
@@ -85,6 +85,7 @@
                 :rules="currentResult.rules"
                 :thesis-text="currentResult.thesisText"
                 :document-base64="currentResult.documentBase64"
+                :document-type="currentResult.documentType"
               />
               <template #fallback>
                 <div class="flex items-center justify-center py-16">
@@ -123,7 +124,7 @@
             </div>
 
             <h2 class="mb-5 text-5xl font-black leading-tight tracking-tight md:text-6xl animate-slide-up" style="animation-delay: 80ms;">
-              Rapikan Skripsi
+              Rapikan Dokumen
               <br />
               <span class="text-yellow-400" style="text-shadow: 4px 4px 0px #b45309;">
                 Otomatis! 🚀
@@ -131,7 +132,7 @@
             </h2>
 
             <p class="mx-auto mb-10 max-w-xl text-lg leading-relaxed text-slate-300 font-medium animate-slide-up" style="animation-delay: 160ms;">
-              Upload panduan + dokumen skripsi — AI baca aturan, format otomatis, file siap cetak! 🎓
+              Upload panduan + dokumen <strong class="text-yellow-400">skripsi</strong> atau <strong class="text-cyan-400">jurnal</strong> — AI baca aturan, format otomatis, file siap submit! 🎓📰
             </p>
 
             <!-- Feature cards with stagger pop-in -->
@@ -142,14 +143,14 @@
                 <p class="text-sm text-slate-300 font-medium">Ekstrak aturan format dari panduan PDF secara otomatis</p>
               </div>
               <div class="card-pink rounded-2xl border-4 border-pink-400 bg-[#1a1040] p-6 animate-pop-in" style="animation-delay: 370ms;">
-                <div class="mb-3 text-4xl">⚡</div>
-                <h3 class="mb-1 font-black text-pink-400 text-lg">Super Instan</h3>
-                <p class="text-sm text-slate-300 font-medium">Proses dalam hitungan detik, langsung bisa diunduh</p>
+                <div class="mb-3 text-4xl">📰</div>
+                <h3 class="mb-1 font-black text-pink-400 text-lg">Skripsi & Jurnal</h3>
+                <p class="text-sm text-slate-300 font-medium">Mendukung format skripsi, tesis, maupun paper jurnal ilmiah</p>
               </div>
               <div class="card-cyan rounded-2xl border-4 border-cyan-400 bg-[#1a1040] p-6 animate-pop-in" style="animation-delay: 490ms;">
                 <div class="mb-3 text-4xl">✅</div>
                 <h3 class="mb-1 font-black text-cyan-400 text-lg">Super Akurat</h3>
-                <p class="text-sm text-slate-300 font-medium">Format sempurna sesuai aturan panduan kampus Anda</p>
+                <p class="text-sm text-slate-300 font-medium">Format sempurna sesuai aturan panduan kampus atau template jurnal</p>
               </div>
             </div>
           </div>
@@ -196,8 +197,8 @@
     <!-- Footer -->
     <footer class="relative z-10 mt-20 border-t-4 border-yellow-400/30 py-8">
       <div class="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
-        <p class="text-sm font-bold text-slate-400">Dibuat untuk mahasiswa Indonesia 🇮🇩 — RAPIIN v1.0</p>
-        <p class="mt-1 text-xs text-slate-500">Rancang Bangun Sistem Otomatisasi Format Dokumen Skripsi &copy; 2026</p>
+        <p class="text-sm font-bold text-slate-400">Dibuat untuk mahasiswa Indonesia 🇮🇩 — RAPIIN v2.0</p>
+        <p class="mt-1 text-xs text-slate-500">Sistem Otomatisasi Format Dokumen Skripsi & Jurnal &copy; 2026</p>
       </div>
     </footer>
 
@@ -217,12 +218,13 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { FormattingRules } from "~/utils/types";
+import type { AnyFormattingRules, DocumentType } from "~/utils/types";
 
 interface ProcessingResult {
-  rules: FormattingRules;
+  rules: AnyFormattingRules;
   thesisText: string;
   documentBase64: string;
+  documentType: DocumentType;
 }
 
 const supabase = useSupabaseClient();
@@ -235,7 +237,7 @@ const processingStep = ref("");
 const processingProgress = ref(0);
 
 const showPaymentModal = ref(false);
-const pendingFiles = ref<{ guideline: File; thesis: File } | null>(null);
+const pendingFiles = ref<{ guideline: File; thesis: File; documentType: DocumentType } | null>(null);
 const pendingUserId = ref("");
 const pendingUserEmail = ref("");
 const pendingUserName = ref("");
@@ -245,7 +247,7 @@ const signOut = async () => {
   await navigateTo("/login");
 };
 
-const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
+const handleFormSubmit = async (payload: { guideline: File; thesis: File; documentType: DocumentType }) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user?.id) {
     error.value = "Sesi login tidak valid. Silakan refresh dan login ulang.";
@@ -254,7 +256,7 @@ const handleFormSubmit = async (files: { guideline: File; thesis: File }) => {
   pendingUserId.value = session.user.id;
   pendingUserEmail.value = session.user.email ?? session.user.user_metadata?.email ?? "";
   pendingUserName.value = session.user.user_metadata?.full_name ?? session.user.email ?? "";
-  pendingFiles.value = files;
+  pendingFiles.value = payload;
   showPaymentModal.value = true;
 };
 
@@ -269,27 +271,32 @@ const handlePaymentCancel = () => {
 };
 
 const processDocuments = async (
-  files: { guideline: File; thesis: File },
+  payload: { guideline: File; thesis: File; documentType: DocumentType },
   orderId: string
 ) => {
   isProcessing.value = true;
   error.value = "";
   processingProgress.value = 0;
 
+  const docTypeLabel = payload.documentType === "jurnal" ? "jurnal" : "skripsi";
+
   try {
     processingStep.value = "📖 Membaca panduan...";
     processingProgress.value = 20;
     await new Promise((r) => setTimeout(r, 500));
-    const guidelineText = await readFile(files.guideline);
+    const guidelineText = await readFile(payload.guideline);
 
-    processingStep.value = "🤖 Ekstrak aturan dari panduan...";
+    processingStep.value = `🤖 Ekstrak aturan ${docTypeLabel}...`;
     processingProgress.value = 40;
     await new Promise((r) => setTimeout(r, 500));
 
     const rulesResponse = await fetch("/api/extractRules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guidelineText: guidelineText.slice(0, 4000) }),
+      body: JSON.stringify({
+        guidelineText: guidelineText.slice(0, 4000),
+        documentType: payload.documentType,
+      }),
     });
     const rulesData = await rulesResponse.json();
     if (!rulesResponse.ok || !rulesData.success) {
@@ -297,19 +304,23 @@ const processDocuments = async (
     }
     const { rules } = rulesData;
 
-    processingStep.value = "📝 Membaca dokumen skripsi...";
+    processingStep.value = `📝 Membaca dokumen ${docTypeLabel}...`;
     processingProgress.value = 60;
     await new Promise((r) => setTimeout(r, 500));
-    const thesisText = await readFile(files.thesis);
+    const thesisText = await readFile(payload.thesis);
 
-    processingStep.value = "✨ Format dokumen...";
+    processingStep.value = `✨ Format dokumen ${docTypeLabel}...`;
     processingProgress.value = 80;
     await new Promise((r) => setTimeout(r, 500));
 
     const formatResponse = await fetch("/api/formatDoc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thesisText, rules }),
+      body: JSON.stringify({
+        thesisText,
+        rules,
+        documentType: payload.documentType,
+      }),
     });
     const formatData = await formatResponse.json();
     if (!formatResponse.ok || !formatData.success || !formatData.document) {
@@ -323,15 +334,20 @@ const processDocuments = async (
         body: {
           userId: pendingUserId.value,
           orderId,
-          guidelineFilename: files.guideline.name,
-          thesisFilename: files.thesis.name,
+          guidelineFilename: payload.guideline.name,
+          thesisFilename: payload.thesis.name,
         },
       }).catch(() => {});
     }
 
     processingStep.value = "✅ Selesai!";
     processingProgress.value = 100;
-    currentResult.value = { rules, thesisText, documentBase64 };
+    currentResult.value = {
+      rules,
+      thesisText,
+      documentBase64,
+      documentType: payload.documentType,
+    };
     pendingFiles.value = null;
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Proses gagal";
