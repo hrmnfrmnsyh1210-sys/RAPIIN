@@ -5,12 +5,15 @@ import type {
   AnyFormattingRules,
 } from "./types";
 
-const API_KEY =
-  process.env.OPENAI_API_KEY || process.env.NUXT_PUBLIC_OPENAI_API_KEY;
-const BASE_URL =
-  process.env.LLM_BASE_URL || "https://api.openai.com/v1";
-const API_URL = `${BASE_URL}/chat/completions`;
-const MODEL = process.env.LLM_MODEL || "gpt-4o-mini";
+/**
+ * Konfigurasi LLM — di-pass dari server route via useRuntimeConfig(event),
+ * supaya env var dibaca lewat mekanisme resmi Nuxt (bukan process.env mentah).
+ */
+export interface LLMConfig {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
 
 // ═══════════════════════════════════════════════════════════
 //  PROMPTS
@@ -182,31 +185,64 @@ Berikan HANYA JSON VALID tanpa penjelasan apapun. Jika informasi tidak ada, guna
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Call OpenAI API untuk ekstrak aturan (generic)
+ * Validasi & normalisasi config LLM sebelum dipakai.
  */
-async function callLLM(prompt: string, systemMessage: string): Promise<string> {
-  if (!API_KEY) {
+function resolveConfig(config: LLMConfig): {
+  apiKey: string;
+  apiUrl: string;
+  model: string;
+} {
+  const apiKey = config.apiKey?.trim();
+  const baseUrl = config.baseUrl?.trim();
+  const model = config.model?.trim();
+
+  if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY tidak ditemukan dalam environment variables",
+      "OPENAI_API_KEY tidak ditemukan / kosong. Cek environment variable.",
     );
   }
+  if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+    throw new Error(
+      `LLM_BASE_URL tidak valid: "${baseUrl}". Harus berupa URL yang diawali http(s)://`,
+    );
+  }
+  if (!model) {
+    throw new Error("LLM_MODEL tidak ditemukan / kosong.");
+  }
 
-  console.log(`[LLM] Using model: ${MODEL} | base: ${BASE_URL}`);
+  return {
+    apiKey,
+    apiUrl: `${baseUrl.replace(/\/+$/, "")}/chat/completions`,
+    model,
+  };
+}
 
-  const response = await fetch(API_URL, {
+/**
+ * Call OpenAI API untuk ekstrak aturan (generic)
+ */
+async function callLLM(
+  prompt: string,
+  systemMessage: string,
+  config: LLMConfig,
+): Promise<string> {
+  const { apiKey, apiUrl, model } = resolveConfig(config);
+
+  console.log(`[LLM] Using model: ${model} | url: ${apiUrl}`);
+
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages: [
         { role: "system", content: systemMessage },
         { role: "user", content: prompt },
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 4000,
     }),
   });
 
@@ -251,12 +287,14 @@ function extractJSON(content: string): any {
  */
 export async function extractRulesFromAI(
   guidelineText: string,
+  config: LLMConfig,
 ): Promise<FormattingRules> {
   try {
     const prompt = buildSkripsiPrompt(guidelineText);
     const content = await callLLM(
       prompt,
       "Kamu adalah expert dalam membaca dan mengekstrak aturan formatting dokumen skripsi. Selalu output JSON VALID.",
+      config,
     );
     return extractJSON(content) as FormattingRules;
   } catch (error) {
@@ -270,12 +308,14 @@ export async function extractRulesFromAI(
  */
 export async function extractJournalRulesFromAI(
   guidelineText: string,
+  config: LLMConfig,
 ): Promise<JournalFormattingRules> {
   try {
     const prompt = buildJurnalPrompt(guidelineText);
     const content = await callLLM(
       prompt,
       "Kamu adalah expert dalam membaca dan mengekstrak aturan formatting jurnal ilmiah. Selalu output JSON VALID.",
+      config,
     );
     return extractJSON(content) as JournalFormattingRules;
   } catch (error) {
@@ -290,11 +330,12 @@ export async function extractJournalRulesFromAI(
 export async function extractRulesByType(
   guidelineText: string,
   documentType: DocumentType,
+  config: LLMConfig,
 ): Promise<AnyFormattingRules> {
   if (documentType === "jurnal") {
-    return extractJournalRulesFromAI(guidelineText);
+    return extractJournalRulesFromAI(guidelineText, config);
   }
-  return extractRulesFromAI(guidelineText);
+  return extractRulesFromAI(guidelineText, config);
 }
 
 // ═══════════════════════════════════════════════════════════

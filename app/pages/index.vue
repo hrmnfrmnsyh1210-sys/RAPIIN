@@ -294,7 +294,7 @@ const processDocuments = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        guidelineText: guidelineText.slice(0, 4000),
+        guidelineText,
         documentType: payload.documentType,
       }),
     });
