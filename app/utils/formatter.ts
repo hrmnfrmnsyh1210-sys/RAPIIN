@@ -59,32 +59,66 @@ export async function formatDocument(
   const paragraphs = content.split("\n").filter((p) => p.trim());
   const formattedParagraphs: Paragraph[] = [];
 
+  const lineSpacing = Math.round(rules.spacing * 240);
+  const fontSize = (rules.size || 12) * 2;
+
   for (const text of paragraphs) {
     const trimmed = text.trim();
-    // Hanya baris "BAB I", "BAB 1", "CHAPTER II", "BAGIAN 3" dst yang dianggap
-    // judul bab. Pola lama (\d+\.) keliru menangkap daftar bernomor & sub-judul
-    // biasa ("1. Latar Belakang") sehingga jadi heading di tengah dokumen.
-    const isChapter = isSkripsiChapter(trimmed);
+    // Klasifikasi baris: BAB / sub-bab / sub-sub-bab / paragraf biasa. Heading
+    // di-set lewat `heading:` supaya dokumen punya struktur outline (berguna
+    // untuk daftar isi otomatis di Word), tampilannya tetap mengikuti rules.
+    const lineType = classifySkripsiLine(trimmed);
 
-    if (isChapter) {
-      const chapterText = rules.bab?.uppercase
-        ? trimmed.toUpperCase()
-        : trimmed;
-
+    if (lineType === "bab") {
       formattedParagraphs.push(
         new Paragraph({
+          heading: HeadingLevel.HEADING_1,
           children: [
             new TextRun({
-              text: chapterText,
-              bold: rules.bab?.bold,
+              text: rules.bab?.uppercase ? trimmed.toUpperCase() : trimmed,
+              bold: rules.bab?.bold ?? true,
               font: rules.font,
-              size: (rules.size || 12) * 2,
+              size: fontSize,
             }),
           ],
-          spacing: {
-            line: Math.round(rules.spacing * 240),
-          },
-          alignment: parseAlignment(rules.bab?.align),
+          spacing: { line: lineSpacing, before: 240, after: 120 },
+          alignment: parseAlignment(rules.bab?.align || "center"),
+        }),
+      );
+    } else if (lineType === "subBab") {
+      const sb = rules.subBab;
+      formattedParagraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          children: [
+            new TextRun({
+              text: sb?.uppercase ? trimmed.toUpperCase() : trimmed,
+              bold: sb?.bold ?? true,
+              italics: sb?.italic ?? false,
+              font: rules.font,
+              size: fontSize,
+            }),
+          ],
+          spacing: { line: lineSpacing, before: 200, after: 80 },
+          alignment: parseAlignment(sb?.align || "left"),
+        }),
+      );
+    } else if (lineType === "subSubBab") {
+      const ssb = rules.subSubBab;
+      formattedParagraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_3,
+          children: [
+            new TextRun({
+              text: ssb?.uppercase ? trimmed.toUpperCase() : trimmed,
+              bold: ssb?.bold ?? true,
+              italics: ssb?.italic ?? false,
+              font: rules.font,
+              size: fontSize,
+            }),
+          ],
+          spacing: { line: lineSpacing, before: 160, after: 60 },
+          alignment: parseAlignment(ssb?.align || "left"),
         }),
       );
     } else {
@@ -94,12 +128,10 @@ export async function formatDocument(
             new TextRun({
               text: trimmed,
               font: rules.font,
-              size: (rules.size || 12) * 2,
+              size: fontSize,
             }),
           ],
-          spacing: {
-            line: Math.round(rules.spacing * 240),
-          },
+          spacing: { line: lineSpacing },
           alignment: parseAlignment(rules.paragraf?.align || "left"),
           indent: {
             firstLine: rules.paragraf?.indent
@@ -140,6 +172,24 @@ function isSkripsiChapter(line: string): boolean {
   return /^(BAB|CHAPTER|BAGIAN)\s+([IVXLCDM]+|\d+)\b/i.test(line.trim());
 }
 
+export type SkripsiLineType = "bab" | "subBab" | "subSubBab" | "body";
+
+/**
+ * Klasifikasi satu baris skripsi → BAB / sub-bab / sub-sub-bab / paragraf biasa.
+ *   BAB         : "BAB I", "BAB 2 PENDAHULUAN"   → Heading 1
+ *   sub-bab     : "1.1 Latar Belakang"           → Heading 2
+ *   sub-sub-bab : "1.1.1 Ruang Lingkup"          → Heading 3
+ * Penomoran wajib diikuti spasi lalu huruf KAPITAL, supaya kalimat biasa yang
+ * kebetulan diawali angka desimal (mis. "3.14 adalah ...") tidak ikut tertangkap.
+ */
+export function classifySkripsiLine(line: string): SkripsiLineType {
+  const t = line.trim();
+  if (isSkripsiChapter(t)) return "bab";
+  if (/^\d{1,2}\.\d{1,2}\.\d{1,2}\.?\s+[A-Z]/.test(t)) return "subSubBab";
+  if (/^\d{1,2}\.\d{1,2}\.?\s+[A-Z]/.test(t)) return "subBab";
+  return "body";
+}
+
 /**
  * Escape karakter HTML supaya teks dokumen aman ditaruh via v-html.
  */
@@ -167,18 +217,33 @@ export function formatSkripsiPreviewHtml(
   const indentCm = rules.paragraf?.indent ?? 0.75;
   const paragraphAlign = rules.paragraf?.align || "justify";
 
+  // Style satu baris heading (bab/sub-bab/sub-sub-bab) untuk preview HTML.
+  const headingHtml = (
+    text: string,
+    cfg: { uppercase?: boolean; bold?: boolean; italic?: boolean; align?: string },
+    defaultAlign: string,
+  ): string => {
+    const shown = cfg.uppercase ? text.toUpperCase() : text;
+    const weight = cfg.bold ?? true ? "700" : "400";
+    const fontStyle = cfg.italic ? "italic" : "normal";
+    const align = cfg.align || defaultAlign;
+    return `<p style="text-align:${align};font-weight:${weight};font-style:${fontStyle};margin:${
+      spacing * 0.5
+    }em 0 ${spacing * 0.25}em;">${escapeHtml(shown)}</p>`;
+  };
+
   const body = paragraphs
     .map((text) => {
       const trimmed = text.trim();
-      if (isSkripsiChapter(trimmed)) {
-        const chapterText = rules.bab?.uppercase
-          ? trimmed.toUpperCase()
-          : trimmed;
-        const align = rules.bab?.align || "center";
-        const weight = rules.bab?.bold ? "700" : "400";
-        return `<p style="text-align:${align};font-weight:${weight};margin:0 0 ${spacing * 0.5}em;">${escapeHtml(
-          chapterText,
-        )}</p>`;
+      const lineType = classifySkripsiLine(trimmed);
+      if (lineType === "bab") {
+        return headingHtml(trimmed, rules.bab || {}, "center");
+      }
+      if (lineType === "subBab") {
+        return headingHtml(trimmed, rules.subBab || {}, "left");
+      }
+      if (lineType === "subSubBab") {
+        return headingHtml(trimmed, rules.subSubBab || {}, "left");
       }
       return `<p style="text-align:${paragraphAlign};text-indent:${indentCm}cm;margin:0;">${escapeHtml(
         trimmed,

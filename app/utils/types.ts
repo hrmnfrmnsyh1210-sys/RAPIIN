@@ -19,6 +19,20 @@ export interface FormattingRules {
     bold?: boolean;
     align?: "center" | "left" | "right";
   };
+  // Judul sub-bab (mis. "1.1 Latar Belakang") → Heading 2
+  subBab?: {
+    uppercase?: boolean;
+    bold?: boolean;
+    italic?: boolean;
+    align?: "center" | "left" | "right";
+  };
+  // Judul sub-sub-bab (mis. "1.1.1 ...") → Heading 3
+  subSubBab?: {
+    uppercase?: boolean;
+    bold?: boolean;
+    italic?: boolean;
+    align?: "center" | "left" | "right";
+  };
   paragraf?: {
     align?: string;
     indent?: number;

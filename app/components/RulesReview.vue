@@ -90,6 +90,68 @@
       </div>
     </div>
 
+    <!-- Format Sub-Bab -->
+    <div class="rounded-xl border-2 border-white/10 bg-white/3 p-5">
+      <p class="mb-1 text-xs font-black uppercase tracking-widest text-slate-500">Format Sub-Bab → Heading 2</p>
+      <p class="mb-4 text-xs text-slate-500 font-medium">Contoh: <span class="font-bold text-slate-400">1.1 Latar Belakang</span></p>
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subBab.bold" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Bold</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subBab.italic" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Italic</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subBab.uppercase" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Uppercase</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="text-sm font-bold text-slate-400">Perataan</span>
+          <select
+            v-model="local.subBab.align"
+            class="rounded-lg border-2 border-white/15 bg-slate-900/60 px-3 py-1.5 text-sm font-bold text-white focus:border-yellow-400 focus:outline-none"
+          >
+            <option value="left">Kiri</option>
+            <option value="center">Tengah</option>
+            <option value="right">Kanan</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Format Sub-Sub-Bab -->
+    <div class="rounded-xl border-2 border-white/10 bg-white/3 p-5">
+      <p class="mb-1 text-xs font-black uppercase tracking-widest text-slate-500">Format Sub-Sub-Bab → Heading 3</p>
+      <p class="mb-4 text-xs text-slate-500 font-medium">Contoh: <span class="font-bold text-slate-400">1.1.1 Ruang Lingkup</span></p>
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subSubBab.bold" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Bold</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subSubBab.italic" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Italic</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="local.subSubBab.uppercase" type="checkbox" class="h-4 w-4 accent-yellow-400" />
+          <span class="text-sm font-bold text-slate-300">Uppercase</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="text-sm font-bold text-slate-400">Perataan</span>
+          <select
+            v-model="local.subSubBab.align"
+            class="rounded-lg border-2 border-white/15 bg-slate-900/60 px-3 py-1.5 text-sm font-bold text-white focus:border-yellow-400 focus:outline-none"
+          >
+            <option value="left">Kiri</option>
+            <option value="center">Tengah</option>
+            <option value="right">Kanan</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
     <!-- Format Paragraf -->
     <div class="rounded-xl border-2 border-white/10 bg-white/3 p-5">
       <p class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500">Format Paragraf</p>
@@ -168,6 +230,18 @@ const local = reactive<FormattingRules>({
     bold: props.rules.bab?.bold ?? true,
     uppercase: props.rules.bab?.uppercase ?? true,
     align: props.rules.bab?.align ?? "center",
+  },
+  subBab: {
+    bold: props.rules.subBab?.bold ?? true,
+    italic: props.rules.subBab?.italic ?? false,
+    uppercase: props.rules.subBab?.uppercase ?? false,
+    align: props.rules.subBab?.align ?? "left",
+  },
+  subSubBab: {
+    bold: props.rules.subSubBab?.bold ?? true,
+    italic: props.rules.subSubBab?.italic ?? false,
+    uppercase: props.rules.subSubBab?.uppercase ?? false,
+    align: props.rules.subSubBab?.align ?? "left",
   },
   paragraf: {
     indent: props.rules.paragraf?.indent ?? 0.75,

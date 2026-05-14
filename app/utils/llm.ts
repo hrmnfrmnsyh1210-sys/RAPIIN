@@ -52,7 +52,9 @@ Ekstrak SEMUA aturan formatting yang ada dalam panduan di atas. Termasuk:
 - Ukuran font (dalam pt)
 - Spasi baris (single, 1.5, double, dll)
 - Margin (atas, bawah, kiri, kanan dalam cm)
-- Format judul BAB/SECTION (bold, uppercase, align, dll)
+- Format judul BAB (mis. "BAB I PENDAHULUAN") — bold, uppercase, align
+- Format judul SUB-BAB (mis. "1.1 Latar Belakang") — bold, italic, uppercase, align
+- Format judul SUB-SUB-BAB (mis. "1.1.1 ...") — bold, italic, uppercase, align
 - Format paragraf (indent, alignment, dll)
 - Format daftar isi
 - Format footer/header
@@ -76,6 +78,18 @@ Berikan HANYA JSON VALID tanpa penjelasan apapun. Jika tidak ada informasi, guna
     "uppercase": true,
     "bold": true,
     "align": "center"
+  },
+  "subBab": {
+    "uppercase": false,
+    "bold": true,
+    "italic": false,
+    "align": "left"
+  },
+  "subSubBab": {
+    "uppercase": false,
+    "bold": true,
+    "italic": false,
+    "align": "left"
   },
   "paragraf": {
     "indent": 0.75,
@@ -422,6 +436,18 @@ export function mergeWithDefaults(
       bold: true,
       align: "center",
     },
+    subBab: {
+      uppercase: false,
+      bold: true,
+      italic: false,
+      align: "left",
+    },
+    subSubBab: {
+      uppercase: false,
+      bold: true,
+      italic: false,
+      align: "left",
+    },
     paragraf: {
       align: "justify",
       indent: 0.75,
@@ -438,6 +464,14 @@ export function mergeWithDefaults(
     bab: {
       ...defaults.bab,
       ...(extractedRules.bab || {}),
+    },
+    subBab: {
+      ...defaults.subBab,
+      ...(extractedRules.subBab || {}),
+    },
+    subSubBab: {
+      ...defaults.subSubBab,
+      ...(extractedRules.subSubBab || {}),
     },
     paragraf: {
       ...defaults.paragraf,

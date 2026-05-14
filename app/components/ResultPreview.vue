@@ -59,15 +59,33 @@
         </div>
       </div>
 
-      <!-- BAB Rules -->
-      <div v-if="rules.bab" class="mt-4 rounded-lg border-2 border-indigo-500/15 bg-indigo-500/5 p-4">
-        <p class="mb-3 text-xs font-black text-slate-400">Format Judul BAB</p>
-        <div class="flex flex-wrap gap-2">
-          <span v-if="rules.bab.bold" class="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-300">Bold</span>
-          <span v-if="rules.bab.uppercase" class="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-300">Uppercase</span>
-          <span class="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-300">
-            {{ rules.bab.align === "center" ? "Tengah" : rules.bab.align === "right" ? "Kanan" : "Kiri" }}
-          </span>
+      <!-- Heading Rules: BAB / Sub-Bab / Sub-Sub-Bab -->
+      <div class="mt-4 space-y-2">
+        <div v-if="rules.bab" class="flex items-center gap-3 rounded-lg border-2 border-indigo-500/15 bg-indigo-500/5 p-3">
+          <span class="rounded-md border-2 border-indigo-400 bg-indigo-400/10 px-2 py-0.5 text-xs font-black text-indigo-300">BAB · H1</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span v-if="rules.bab.bold" class="rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-300">Bold</span>
+            <span v-if="rules.bab.uppercase" class="rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-300">CAPS</span>
+            <span class="rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-300">{{ alignLabel(rules.bab.align) }}</span>
+          </div>
+        </div>
+        <div v-if="rules.subBab" class="flex items-center gap-3 rounded-lg border-2 border-violet-500/15 bg-violet-500/5 p-3">
+          <span class="rounded-md border-2 border-violet-400/70 bg-violet-400/10 px-2 py-0.5 text-xs font-black text-violet-300">Sub-Bab · H2</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span v-if="rules.subBab.bold" class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-bold text-violet-300">Bold</span>
+            <span v-if="rules.subBab.italic" class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-bold text-violet-300">Italic</span>
+            <span v-if="rules.subBab.uppercase" class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-bold text-violet-300">CAPS</span>
+            <span class="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-bold text-violet-300">{{ alignLabel(rules.subBab.align) }}</span>
+          </div>
+        </div>
+        <div v-if="rules.subSubBab" class="flex items-center gap-3 rounded-lg border-2 border-purple-500/15 bg-purple-500/5 p-3">
+          <span class="rounded-md border-2 border-purple-400/50 bg-purple-400/10 px-2 py-0.5 text-xs font-black text-purple-300">Sub-Sub-Bab · H3</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span v-if="rules.subSubBab.bold" class="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-[11px] font-bold text-purple-300">Bold</span>
+            <span v-if="rules.subSubBab.italic" class="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-[11px] font-bold text-purple-300">Italic</span>
+            <span v-if="rules.subSubBab.uppercase" class="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-[11px] font-bold text-purple-300">CAPS</span>
+            <span class="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-[11px] font-bold text-purple-300">{{ alignLabel(rules.subSubBab.align) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -280,6 +298,9 @@ const jurnalSteps = [
 const activeNextSteps = computed(() =>
   props.documentType === "jurnal" ? jurnalSteps : skripsiSteps,
 );
+
+const alignLabel = (align?: string) =>
+  align === "center" ? "Tengah" : align === "right" ? "Kanan" : "Kiri";
 
 const previewContent = computed(() => props.thesisText?.substring(0, 500) ?? "");
 const previewLines = computed(() => previewContent.value.split("\n").filter((l) => l.trim()));
