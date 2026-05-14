@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody<{
       guidelineText: string;
       documentType?: DocumentType;
+      targetProgram?: string;
     }>(event);
 
     if (!body?.guidelineText) {
@@ -67,11 +68,14 @@ export default defineEventHandler(async (event) => {
       model: runtimeConfig.llmModel,
     };
 
+    const targetProgram = body.targetProgram?.trim() || undefined;
+
     // Call LLM untuk ekstrak aturan berdasarkan tipe dokumen
-    const extractedRules = await extractRulesByType(
+    const { rules: extractedRules, programs } = await extractRulesByType(
       guidelineForLLM,
       docType,
       llmConfig,
+      targetProgram,
     );
 
     // Validate rules
@@ -88,9 +92,16 @@ export default defineEventHandler(async (event) => {
     // Merge dengan defaults
     const finalRules = mergeRulesByType(extractedRules, docType);
 
+    // Kalau panduan memuat >1 jurusan dan user belum memilih, frontend perlu
+    // menampilkan pemilih jurusan dulu sebelum aturan dianggap final.
+    const needProgramSelection = !targetProgram && programs.length > 1;
+
     return {
       success: true,
       rules: finalRules,
+      programs,
+      needProgramSelection,
+      selectedProgram: targetProgram ?? null,
       documentType: docType,
       message: `Rules berhasil diekstrak dari panduan ${docType}`,
     };

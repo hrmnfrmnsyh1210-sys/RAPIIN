@@ -61,7 +61,10 @@ export async function formatDocument(
 
   for (const text of paragraphs) {
     const trimmed = text.trim();
-    const isChapter = /^(BAB|CHAPTER|BAGIAN|\d+\.)\s+/i.test(trimmed);
+    // Hanya baris "BAB I", "BAB 1", "CHAPTER II", "BAGIAN 3" dst yang dianggap
+    // judul bab. Pola lama (\d+\.) keliru menangkap daftar bernomor & sub-judul
+    // biasa ("1. Latar Belakang") sehingga jadi heading di tengah dokumen.
+    const isChapter = isSkripsiChapter(trimmed);
 
     if (isChapter) {
       const chapterText = rules.bab?.uppercase
@@ -127,6 +130,68 @@ export async function formatDocument(
   });
 
   return doc;
+}
+
+/**
+ * Deteksi apakah sebuah baris adalah judul BAB skripsi.
+ * Dipakai bersama oleh formatter docx & preview HTML supaya konsisten.
+ */
+function isSkripsiChapter(line: string): boolean {
+  return /^(BAB|CHAPTER|BAGIAN)\s+([IVXLCDM]+|\d+)\b/i.test(line.trim());
+}
+
+/**
+ * Escape karakter HTML supaya teks dokumen aman ditaruh via v-html.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Render perkiraan tampilan dokumen skripsi sebagai HTML — dipakai untuk
+ * preview gratis sebelum user membayar. Bukan file final, hanya gambaran
+ * visual seberapa "rapi" hasilnya mengikuti aturan yang dikonfirmasi.
+ */
+export function formatSkripsiPreviewHtml(
+  content: string,
+  rules: FormattingRules,
+): string {
+  const paragraphs = content.split("\n").filter((p) => p.trim());
+  const font = rules.font || "Times New Roman";
+  const size = rules.size || 12;
+  const spacing = rules.spacing || 1.5;
+  const indentCm = rules.paragraf?.indent ?? 0.75;
+  const paragraphAlign = rules.paragraf?.align || "justify";
+
+  const body = paragraphs
+    .map((text) => {
+      const trimmed = text.trim();
+      if (isSkripsiChapter(trimmed)) {
+        const chapterText = rules.bab?.uppercase
+          ? trimmed.toUpperCase()
+          : trimmed;
+        const align = rules.bab?.align || "center";
+        const weight = rules.bab?.bold ? "700" : "400";
+        return `<p style="text-align:${align};font-weight:${weight};margin:0 0 ${spacing * 0.5}em;">${escapeHtml(
+          chapterText,
+        )}</p>`;
+      }
+      return `<p style="text-align:${paragraphAlign};text-indent:${indentCm}cm;margin:0;">${escapeHtml(
+        trimmed,
+      )}</p>`;
+    })
+    .join("");
+
+  // "Kertas" A4 dengan margin sesuai rules. Lebar dibatasi, biar bisa di-scroll.
+  return `<div style="background:#fff;color:#111;font-family:'${font}',serif;font-size:${size}pt;line-height:${spacing};padding:${
+    rules.margin.top || 4
+  }cm ${rules.margin.right || 3}cm ${rules.margin.bottom || 3}cm ${
+    rules.margin.left || 4
+  }cm;box-sizing:border-box;">${body}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -281,16 +346,26 @@ export async function formatJournalDocument(
   rules: JournalFormattingRules,
 ): Promise<Document> {
   const structure = parseJournalStructure(content);
-  const children: Paragraph[] = [];
+
+  // Front matter (title/authors/abstract/keywords) membentang penuh 1 kolom,
+  // sedangkan body & referensi mengikuti layout kolom dari rules. Keduanya
+  // dipisah jadi 2 section docx supaya layout jurnal 2 kolom tampil benar.
+  const frontMatter: Paragraph[] = [];
+  const body: Paragraph[] = [];
+  let bodyStarted = false;
+  const FRONT_TYPES = ["title", "author", "affiliation", "abstract", "keywords"];
 
   const baseFont = rules.font || "Times New Roman";
   const baseSize = rules.size || 12;
   const baseSpacing = Math.round((rules.spacing || 1.0) * 240);
 
   for (const section of structure) {
+    // Begitu ketemu heading/body/reference pertama, semua sisanya masuk body.
+    if (!FRONT_TYPES.includes(section.type)) bodyStarted = true;
+    const target = bodyStarted ? body : frontMatter;
     switch (section.type) {
       case "title":
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -309,7 +384,7 @@ export async function formatJournalDocument(
         break;
 
       case "author":
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -325,7 +400,7 @@ export async function formatJournalDocument(
         break;
 
       case "affiliation":
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -342,7 +417,7 @@ export async function formatJournalDocument(
         break;
 
       case "abstract":
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -366,7 +441,7 @@ export async function formatJournalDocument(
         break;
 
       case "keywords":
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -393,7 +468,7 @@ export async function formatJournalDocument(
         const headingText = s1?.uppercase
           ? section.text.toUpperCase()
           : section.text;
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -412,7 +487,7 @@ export async function formatJournalDocument(
 
       case "heading2": {
         const s2 = rules.sections?.level2;
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -432,7 +507,7 @@ export async function formatJournalDocument(
 
       case "heading3": {
         const s3 = rules.sections?.level3;
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -452,7 +527,7 @@ export async function formatJournalDocument(
 
       case "reference": {
         const ref = rules.references;
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -479,7 +554,7 @@ export async function formatJournalDocument(
 
       default:
         // body text
-        children.push(
+        target.push(
           new Paragraph({
             children: [
               new TextRun({
@@ -506,34 +581,58 @@ export async function formatJournalDocument(
   const pageWidth = isLetter ? 12240 : 11906; // twips
   const pageHeight = isLetter ? 15840 : 16838;
 
-  const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: {
-            size: {
-              width: pageWidth,
-              height: pageHeight,
-            },
-            margin: {
-              top: cmToTwip(rules.margin.top || 2.54),
-              bottom: cmToTwip(rules.margin.bottom || 2.54),
-              left: cmToTwip(rules.margin.left || 2.54),
-              right: cmToTwip(rules.margin.right || 2.54),
-            },
-          },
-          column: rules.columns?.count === 2
-            ? {
-                count: 2,
-                space: cmToTwip(rules.columns?.gap || 0.5),
-                equalWidth: true,
-              }
-            : undefined,
-        },
-        children,
+  // Jumlah kolom — di-coerce ke number karena LLM kadang mengembalikan string
+  // ("2") yang membuat perbandingan === 2 gagal & layout jatuh ke 1 kolom.
+  const columnCount = Number(rules.columns?.count) || 1;
+
+  const pageProps = {
+    size: { width: pageWidth, height: pageHeight },
+    margin: {
+      top: cmToTwip(rules.margin.top || 2.54),
+      bottom: cmToTwip(rules.margin.bottom || 2.54),
+      left: cmToTwip(rules.margin.left || 2.54),
+      right: cmToTwip(rules.margin.right || 2.54),
+    },
+  };
+
+  const bodyColumn =
+    columnCount >= 2
+      ? {
+          count: columnCount,
+          space: cmToTwip(rules.columns?.gap || 0.5),
+          equalWidth: true,
+        }
+      : undefined;
+
+  const sections: any[] = [];
+
+  // Section 1: front matter — selalu 1 kolom penuh.
+  if (frontMatter.length > 0) {
+    sections.push({
+      properties: { page: pageProps },
+      children: frontMatter,
+    });
+  }
+
+  // Section 2: body — lanjut di halaman yang sama (CONTINUOUS) saat ada
+  // front matter, dengan layout kolom sesuai rules.
+  if (body.length > 0) {
+    sections.push({
+      properties: {
+        type: frontMatter.length > 0 ? SectionType.CONTINUOUS : undefined,
+        page: pageProps,
+        column: bodyColumn,
       },
-    ],
-  });
+      children: body,
+    });
+  }
+
+  // Fallback: dokumen kosong → tetap kirim 1 section valid.
+  if (sections.length === 0) {
+    sections.push({ properties: { page: pageProps }, children: [] });
+  }
+
+  const doc = new Document({ sections });
 
   return doc;
 }

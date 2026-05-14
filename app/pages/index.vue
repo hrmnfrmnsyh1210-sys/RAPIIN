@@ -53,13 +53,12 @@
 
     <main class="relative z-10 mx-auto max-w-6xl px-4 pt-[76px] pb-12 sm:pt-[84px] sm:pb-12 sm:px-6 lg:px-8">
 
-      <!-- Animated section switcher: upload / processing / result -->
+      <!-- Animated section switcher -->
       <Transition name="section" mode="out-in">
 
-        <!-- Processing state -->
-        <div v-if="isProcessing" key="processing" class="mb-10">
+        <!-- Loading state -->
+        <div v-if="step === 'loading'" key="loading" class="mb-10">
           <div class="processing-card mx-auto max-w-lg rounded-2xl border-4 border-yellow-400 bg-[#1a1040] p-8 text-center">
-            <!-- Bouncing dots loader -->
             <div class="mb-6 flex justify-center gap-3">
               <div class="h-5 w-5 rounded-full bg-yellow-400 animate-bounce" style="animation-delay: 0ms;"></div>
               <div class="h-5 w-5 rounded-full bg-pink-400 animate-bounce" style="animation-delay: 150ms;"></div>
@@ -77,8 +76,58 @@
           </div>
         </div>
 
-        <!-- Result state -->
-        <div v-else-if="currentResult" key="result">
+        <!-- Program selection -->
+        <div v-else-if="step === 'program'" key="program">
+          <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8">
+            <ProgramSelect
+              :programs="detectedPrograms"
+              @select="handleProgramSelect"
+              @back="handleReset"
+            />
+          </div>
+        </div>
+
+        <!-- Rules review -->
+        <div v-else-if="step === 'review'" key="review">
+          <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8">
+            <ClientOnly>
+              <RulesReview
+                :rules="extractedRules"
+                :selected-program="selectedProgram"
+                @confirm="handleRulesConfirm"
+                @back="handleReviewBack"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+
+        <!-- Thesis upload -->
+        <div v-else-if="step === 'thesis'" key="thesis">
+          <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8">
+            <ClientOnly>
+              <ThesisUpload
+                @upload="handleThesisUpload"
+                @back="step = 'review'"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+
+        <!-- Document preview (free, before payment) -->
+        <div v-else-if="step === 'preview'" key="preview">
+          <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8">
+            <ClientOnly>
+              <DocPreview
+                :preview-html="previewHtml"
+                @pay="handlePayFromPreview"
+                @back="step = 'thesis'"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+
+        <!-- Result state (paid, downloadable) -->
+        <div v-else-if="step === 'result' && currentResult" key="result">
           <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8">
             <ClientOnly>
               <ResultPreview
@@ -149,8 +198,8 @@
               </div>
               <div class="card-cyan rounded-2xl border-4 border-cyan-400 bg-[#1a1040] p-6 animate-pop-in" style="animation-delay: 490ms;">
                 <div class="mb-3 text-4xl">✅</div>
-                <h3 class="mb-1 font-black text-cyan-400 text-lg">Super Akurat</h3>
-                <p class="text-sm text-slate-300 font-medium">Format sempurna sesuai aturan panduan kampus atau template jurnal</p>
+                <h3 class="mb-1 font-black text-cyan-400 text-lg">Preview Dulu</h3>
+                <p class="text-sm text-slate-300 font-medium">Lihat hasil format skripsi gratis sebelum memutuskan bayar</p>
               </div>
             </div>
           </div>
@@ -158,7 +207,7 @@
           <!-- Main upload card -->
           <div class="main-card rounded-2xl border-4 border-white/20 bg-[#1a1040] p-6 md:p-8 animate-slide-up" style="animation-delay: 550ms;">
             <ClientOnly>
-              <UploadForm @submit="handleFormSubmit" />
+              <UploadForm @submit="handleFormSubmit" @analyze="handleAnalyze" />
               <template #fallback>
                 <div class="flex items-center justify-center py-16">
                   <div class="text-center">
@@ -218,7 +267,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { AnyFormattingRules, DocumentType } from "~/utils/types";
+import type { AnyFormattingRules, FormattingRules, DocumentType } from "~/utils/types";
 
 interface ProcessingResult {
   rules: AnyFormattingRules;
@@ -227,15 +276,38 @@ interface ProcessingResult {
   documentType: DocumentType;
 }
 
+// Tahapan alur. Jurnal hanya memakai: input → loading → result.
+// Skripsi memakai alur bertahap: input → loading → (program) → review →
+// thesis → loading → preview → loading → result.
+type FlowStep =
+  | "input"
+  | "loading"
+  | "program"
+  | "review"
+  | "thesis"
+  | "preview"
+  | "result";
+
 const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 
-const currentResult = ref<ProcessingResult | null>(null);
-const isProcessing = ref(false);
+const step = ref<FlowStep>("input");
 const error = ref("");
 const processingStep = ref("");
 const processingProgress = ref(0);
 
+// ── State alur skripsi ────────────────────────────────────
+const guidelineText = ref("");          // hasil parse panduan (di-cache)
+const detectedPrograms = ref<string[]>([]);
+const selectedProgram = ref<string | null>(null);
+const extractedRules = ref<FormattingRules>({} as FormattingRules);
+const confirmedRules = ref<AnyFormattingRules | null>(null);
+const thesisText = ref("");
+const previewHtml = ref("");
+
+const currentResult = ref<ProcessingResult | null>(null);
+
+// ── Payment ───────────────────────────────────────────────
 const showPaymentModal = ref(false);
 const pendingFiles = ref<{ guideline: File; thesis: File; documentType: DocumentType } | null>(null);
 const pendingUserId = ref("");
@@ -247,56 +319,53 @@ const signOut = async () => {
   await navigateTo("/login");
 };
 
-const handleFormSubmit = async (payload: { guideline: File; thesis: File; documentType: DocumentType }) => {
+const readFile = async (file: File): Promise<string> => {
+  const { parseFile } = await import("~/utils/fileParser");
+  return parseFile(file);
+};
+
+const ensureSession = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user?.id) {
     error.value = "Sesi login tidak valid. Silakan refresh dan login ulang.";
-    return;
+    return null;
   }
   pendingUserId.value = session.user.id;
   pendingUserEmail.value = session.user.email ?? session.user.user_metadata?.email ?? "";
   pendingUserName.value = session.user.user_metadata?.full_name ?? session.user.email ?? "";
+  return session;
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ALUR JURNAL (lama) — kedua file diproses sekaligus
+// ═══════════════════════════════════════════════════════════
+const handleFormSubmit = async (payload: { guideline: File; thesis: File; documentType: DocumentType }) => {
+  const session = await ensureSession();
+  if (!session) return;
   pendingFiles.value = payload;
   showPaymentModal.value = true;
 };
 
-const handlePaymentSuccess = async (orderId: string) => {
-  showPaymentModal.value = false;
-  if (!pendingFiles.value) return;
-  await processDocuments(pendingFiles.value, orderId);
-};
-
-const handlePaymentCancel = () => {
-  showPaymentModal.value = false;
-};
-
 const processDocuments = async (
   payload: { guideline: File; thesis: File; documentType: DocumentType },
-  orderId: string
+  orderId: string,
 ) => {
-  isProcessing.value = true;
+  step.value = "loading";
   error.value = "";
   processingProgress.value = 0;
-
-  const docTypeLabel = payload.documentType === "jurnal" ? "jurnal" : "skripsi";
+  const docTypeLabel = "jurnal";
 
   try {
     processingStep.value = "📖 Membaca panduan...";
     processingProgress.value = 20;
-    await new Promise((r) => setTimeout(r, 500));
-    const guidelineText = await readFile(payload.guideline);
+    const guideText = await readFile(payload.guideline);
 
     processingStep.value = `🤖 Ekstrak aturan ${docTypeLabel}...`;
     processingProgress.value = 40;
-    await new Promise((r) => setTimeout(r, 500));
-
     const rulesResponse = await fetch("/api/extractRules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        guidelineText,
-        documentType: payload.documentType,
-      }),
+      body: JSON.stringify({ guidelineText: guideText, documentType: payload.documentType }),
     });
     const rulesData = await rulesResponse.json();
     if (!rulesResponse.ok || !rulesData.success) {
@@ -306,66 +375,246 @@ const processDocuments = async (
 
     processingStep.value = `📝 Membaca dokumen ${docTypeLabel}...`;
     processingProgress.value = 60;
-    await new Promise((r) => setTimeout(r, 500));
-    const thesisText = await readFile(payload.thesis);
+    const docText = await readFile(payload.thesis);
 
     processingStep.value = `✨ Format dokumen ${docTypeLabel}...`;
     processingProgress.value = 80;
-    await new Promise((r) => setTimeout(r, 500));
-
     const formatResponse = await fetch("/api/formatDoc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        thesisText,
-        rules,
-        documentType: payload.documentType,
-      }),
+      body: JSON.stringify({ thesisText: docText, rules, documentType: payload.documentType }),
     });
     const formatData = await formatResponse.json();
     if (!formatResponse.ok || !formatData.success || !formatData.document) {
       throw new Error(formatData.error || "Gagal format dokumen");
     }
-    const documentBase64 = formatData.document as string;
 
-    if (pendingUserId.value) {
-      await $fetch("/api/payment/job", {
-        method: "POST",
-        body: {
-          userId: pendingUserId.value,
-          orderId,
-          guidelineFilename: payload.guideline.name,
-          thesisFilename: payload.thesis.name,
-        },
-      }).catch(() => {});
-    }
+    await recordJob(orderId, payload.guideline.name, payload.thesis.name);
 
     processingStep.value = "✅ Selesai!";
     processingProgress.value = 100;
     currentResult.value = {
       rules,
-      thesisText,
-      documentBase64,
+      thesisText: docText,
+      documentBase64: formatData.document as string,
       documentType: payload.documentType,
     };
     pendingFiles.value = null;
+    step.value = "result";
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Proses gagal";
-  } finally {
-    isProcessing.value = false;
+    step.value = "input";
   }
 };
 
+// ═══════════════════════════════════════════════════════════
+//  ALUR SKRIPSI (baru) — analisa → konfirmasi → preview → bayar
+// ═══════════════════════════════════════════════════════════
+const handleAnalyze = async (payload: { guideline: File; documentType: DocumentType }) => {
+  const session = await ensureSession();
+  if (!session) return;
+
+  pendingFiles.value = { guideline: payload.guideline, thesis: null as any, documentType: "skripsi" };
+  selectedProgram.value = null;
+  detectedPrograms.value = [];
+  step.value = "loading";
+  error.value = "";
+  processingProgress.value = 0;
+
+  try {
+    processingStep.value = "📖 Membaca panduan...";
+    processingProgress.value = 30;
+    guidelineText.value = await readFile(payload.guideline);
+
+    processingStep.value = "🤖 Menganalisa aturan format...";
+    processingProgress.value = 70;
+    await extractSkripsiRules();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Analisa panduan gagal";
+    step.value = "input";
+  }
+};
+
+// Panggil /api/extractRules — dipakai ulang setelah jurusan dipilih.
+const extractSkripsiRules = async () => {
+  const res = await fetch("/api/extractRules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      guidelineText: guidelineText.value,
+      documentType: "skripsi",
+      targetProgram: selectedProgram.value || undefined,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal ekstrak rules");
+  }
+
+  if (data.needProgramSelection) {
+    detectedPrograms.value = data.programs || [];
+    step.value = "program";
+    return;
+  }
+
+  extractedRules.value = data.rules as FormattingRules;
+  step.value = "review";
+};
+
+const handleProgramSelect = async (program: string) => {
+  selectedProgram.value = program;
+  step.value = "loading";
+  error.value = "";
+  processingStep.value = `🤖 Ekstrak aturan untuk ${program}...`;
+  processingProgress.value = 60;
+  try {
+    await extractSkripsiRules();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Ekstrak aturan gagal";
+    step.value = "program";
+  }
+};
+
+const handleReviewBack = () => {
+  // Kembali ke pemilihan jurusan kalau ada, kalau tidak ke awal.
+  step.value = detectedPrograms.value.length > 1 ? "program" : "input";
+  if (step.value === "input") handleReset();
+};
+
+const handleRulesConfirm = (rules: FormattingRules) => {
+  confirmedRules.value = rules;
+  step.value = "thesis";
+};
+
+const handleThesisUpload = async (file: File) => {
+  if (!pendingFiles.value) return;
+  pendingFiles.value.thesis = file;
+  step.value = "loading";
+  error.value = "";
+
+  try {
+    processingStep.value = "📝 Membaca dokumen skripsi...";
+    processingProgress.value = 40;
+    thesisText.value = await readFile(file);
+
+    processingStep.value = "✨ Menyusun preview...";
+    processingProgress.value = 80;
+    const res = await fetch("/api/formatDoc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        thesisText: thesisText.value,
+        rules: confirmedRules.value,
+        documentType: "skripsi",
+        mode: "preview",
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success || !data.preview) {
+      throw new Error(data.error || "Gagal membuat preview");
+    }
+    previewHtml.value = data.preview as string;
+    step.value = "preview";
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Gagal membuat preview";
+    step.value = "thesis";
+  }
+};
+
+const handlePayFromPreview = async () => {
+  const session = await ensureSession();
+  if (!session) return;
+  if (!pendingFiles.value?.thesis) return;
+  showPaymentModal.value = true;
+};
+
+// Setelah pembayaran sukses: minta file .docx final (mode full + orderId).
+const finalizeSkripsi = async (orderId: string) => {
+  if (!pendingFiles.value) return;
+  step.value = "loading";
+  error.value = "";
+
+  try {
+    processingStep.value = "🔓 Menyiapkan file final...";
+    processingProgress.value = 50;
+    const res = await fetch("/api/formatDoc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        thesisText: thesisText.value,
+        rules: confirmedRules.value,
+        documentType: "skripsi",
+        mode: "full",
+        orderId,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success || !data.document) {
+      throw new Error(data.error || "Gagal membuat file dokumen");
+    }
+
+    await recordJob(orderId, pendingFiles.value.guideline.name, pendingFiles.value.thesis.name);
+
+    processingStep.value = "✅ Selesai!";
+    processingProgress.value = 100;
+    currentResult.value = {
+      rules: confirmedRules.value as AnyFormattingRules,
+      thesisText: thesisText.value,
+      documentBase64: data.document as string,
+      documentType: "skripsi",
+    };
+    pendingFiles.value = null;
+    step.value = "result";
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Gagal menyiapkan file";
+    step.value = "preview";
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+//  SHARED
+// ═══════════════════════════════════════════════════════════
+const recordJob = async (orderId: string, guidelineName: string, thesisName: string) => {
+  if (!pendingUserId.value) return;
+  await $fetch("/api/payment/job", {
+    method: "POST",
+    body: {
+      userId: pendingUserId.value,
+      orderId,
+      guidelineFilename: guidelineName,
+      thesisFilename: thesisName,
+    },
+  }).catch(() => {});
+};
+
+const handlePaymentSuccess = async (orderId: string) => {
+  showPaymentModal.value = false;
+  if (!pendingFiles.value) return;
+  if (pendingFiles.value.documentType === "jurnal") {
+    await processDocuments(pendingFiles.value, orderId);
+  } else {
+    await finalizeSkripsi(orderId);
+  }
+};
+
+const handlePaymentCancel = () => {
+  showPaymentModal.value = false;
+};
+
 const handleReset = () => {
-  currentResult.value = null;
+  step.value = "input";
   error.value = "";
   processingStep.value = "";
   processingProgress.value = 0;
-};
-
-const readFile = async (file: File): Promise<string> => {
-  const { parseFile } = await import("~/utils/fileParser");
-  return parseFile(file);
+  guidelineText.value = "";
+  detectedPrograms.value = [];
+  selectedProgram.value = null;
+  extractedRules.value = {} as FormattingRules;
+  confirmedRules.value = null;
+  thesisText.value = "";
+  previewHtml.value = "";
+  currentResult.value = null;
+  pendingFiles.value = null;
 };
 </script>
 

@@ -20,14 +20,31 @@ export interface LLMConfig {
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Prompt template untuk ekstrak aturan formatting SKRIPSI
+ * Prompt template untuk ekstrak aturan formatting SKRIPSI.
+ * Jika `targetProgram` diisi, ekstraksi difokuskan ke jurusan/prodi tersebut.
  */
-function buildSkripsiPrompt(guidelineText: string): string {
+function buildSkripsiPrompt(
+  guidelineText: string,
+  targetProgram?: string,
+): string {
+  const focusInstruction = targetProgram
+    ? `
+PENTING — FOKUS JURUSAN:
+Panduan ini memuat aturan untuk beberapa jurusan/program studi. Ekstrak aturan
+formatting HANYA yang berlaku untuk: "${targetProgram}". Abaikan aturan jurusan lain.`
+    : `
+DETEKSI JURUSAN:
+Periksa apakah panduan memuat aturan formatting yang BERBEDA untuk lebih dari
+satu jurusan/program studi/fakultas. Jika ya, daftarkan semua nama jurusan itu
+pada field "programs". Jika panduan hanya untuk satu jurusan (atau tidak
+menyebut jurusan sama sekali), kembalikan "programs" sebagai array kosong [].`;
+
   return `
 Kamu adalah sistem pembaca panduan skripsi yang ahli.
 
 PANDUAN YANG DIBERIKAN:
 ${guidelineText}
+${focusInstruction}
 
 TUGAS:
 Ekstrak SEMUA aturan formatting yang ada dalam panduan di atas. Termasuk:
@@ -45,6 +62,7 @@ OUTPUT:
 Berikan HANYA JSON VALID tanpa penjelasan apapun. Jika tidak ada informasi, gunakan default yang logis:
 
 {
+  "programs": [],
   "font": "Times New Roman",
   "size": 12,
   "spacing": 1.5,
@@ -283,20 +301,42 @@ function extractJSON(content: string): any {
 }
 
 /**
- * Call OpenAI API untuk ekstrak aturan SKRIPSI
+ * Hasil ekstraksi skripsi: aturan + daftar jurusan yang terdeteksi di panduan.
+ */
+export interface SkripsiExtractionResult {
+  rules: FormattingRules;
+  programs: string[];
+}
+
+/**
+ * Call OpenAI API untuk ekstrak aturan SKRIPSI.
+ * `targetProgram` opsional — kalau diisi, ekstraksi difokuskan ke jurusan itu.
  */
 export async function extractRulesFromAI(
   guidelineText: string,
   config: LLMConfig,
-): Promise<FormattingRules> {
+  targetProgram?: string,
+): Promise<SkripsiExtractionResult> {
   try {
-    const prompt = buildSkripsiPrompt(guidelineText);
+    const prompt = buildSkripsiPrompt(guidelineText, targetProgram);
     const content = await callLLM(
       prompt,
       "Kamu adalah expert dalam membaca dan mengekstrak aturan formatting dokumen skripsi. Selalu output JSON VALID.",
       config,
     );
-    return extractJSON(content) as FormattingRules;
+    const parsed = extractJSON(content) as FormattingRules & {
+      programs?: unknown;
+    };
+
+    // Pisahkan daftar jurusan dari objek rules.
+    const programs = Array.isArray(parsed.programs)
+      ? parsed.programs
+          .map((p) => String(p).trim())
+          .filter((p) => p.length > 0)
+      : [];
+    delete parsed.programs;
+
+    return { rules: parsed as FormattingRules, programs };
   } catch (error) {
     console.error("Error extracting skripsi rules:", error);
     throw error;
@@ -325,17 +365,20 @@ export async function extractJournalRulesFromAI(
 }
 
 /**
- * Unified extractor — pilih berdasarkan documentType
+ * Unified extractor — pilih berdasarkan documentType.
+ * Selalu mengembalikan `programs` (kosong untuk jurnal / panduan satu jurusan).
  */
 export async function extractRulesByType(
   guidelineText: string,
   documentType: DocumentType,
   config: LLMConfig,
-): Promise<AnyFormattingRules> {
+  targetProgram?: string,
+): Promise<{ rules: AnyFormattingRules; programs: string[] }> {
   if (documentType === "jurnal") {
-    return extractJournalRulesFromAI(guidelineText, config);
+    const rules = await extractJournalRulesFromAI(guidelineText, config);
+    return { rules, programs: [] };
   }
-  return extractRulesFromAI(guidelineText, config);
+  return extractRulesFromAI(guidelineText, config, targetProgram);
 }
 
 // ═══════════════════════════════════════════════════════════

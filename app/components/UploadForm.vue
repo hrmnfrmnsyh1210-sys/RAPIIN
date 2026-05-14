@@ -101,8 +101,9 @@
         </div>
       </div>
 
-      <!-- Upload Dokumen -->
+      <!-- Upload Dokumen — hanya untuk jurnal; skripsi upload skripsi nanti -->
       <div
+        v-if="documentType === 'jurnal'"
         class="upload-card upload-card-pink relative rounded-2xl border-4 p-6 cursor-pointer animate-pop-in"
         :class="files.thesis
           ? 'border-pink-400 bg-pink-400/8'
@@ -168,7 +169,7 @@
         class="btn-submit flex flex-1 items-center justify-center gap-2 rounded-xl border-4 border-yellow-400 bg-yellow-400 px-6 py-3.5 font-black text-black text-base transition-all duration-200 hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-40 disabled:translate-y-0"
         :class="{ 'btn-glow': isFormValid }"
       >
-        ⚡ Proses Sekarang
+        {{ documentType === 'jurnal' ? '⚡ Proses Sekarang' : '🔍 Analisa Panduan' }}
       </button>
 
       <Transition name="reset-btn">
@@ -185,7 +186,9 @@
     <!-- Hint -->
     <Transition name="hint">
       <p v-if="!isFormValid" class="text-center text-xs font-bold text-slate-500 animate-slide-up" style="animation-delay: 350ms;">
-        Upload kedua file untuk mengaktifkan tombol proses 👆
+        {{ documentType === 'jurnal'
+          ? 'Upload kedua file untuk mengaktifkan tombol proses 👆'
+          : 'Upload panduan skripsi untuk mulai menganalisa 👆' }}
       </p>
     </Transition>
   </div>
@@ -196,7 +199,10 @@ import { ref, computed } from "vue";
 import type { DocumentType } from "~/utils/types";
 
 const emit = defineEmits<{
+  // Jurnal: kedua file langsung diproses (alur lama).
   submit: [payload: { guideline: File; thesis: File; documentType: DocumentType }];
+  // Skripsi: cukup panduan dulu — masuk alur analisa bertahap.
+  analyze: [payload: { guideline: File; documentType: DocumentType }];
 }>();
 
 const guidelineInput = ref<HTMLInputElement | null>(null);
@@ -207,7 +213,11 @@ const files = ref({ guideline: null as File | null, thesis: null as File | null 
 const error = ref("");
 const dragOver = ref({ guideline: false, thesis: false });
 
-const isFormValid = computed(() => files.value.guideline && files.value.thesis);
+const isFormValid = computed(() =>
+  documentType.value === "jurnal"
+    ? !!(files.value.guideline && files.value.thesis)
+    : !!files.value.guideline,
+);
 
 // Dynamic labels based on document type
 const guidelineLabel = computed(() =>
@@ -272,11 +282,18 @@ const handleThesisDrop = (e: DragEvent) => {
 
 const handleSubmit = () => {
   if (!isFormValid.value) return;
-  emit("submit", {
-    guideline: files.value.guideline!,
-    thesis: files.value.thesis!,
-    documentType: documentType.value,
-  });
+  if (documentType.value === "jurnal") {
+    emit("submit", {
+      guideline: files.value.guideline!,
+      thesis: files.value.thesis!,
+      documentType: documentType.value,
+    });
+  } else {
+    emit("analyze", {
+      guideline: files.value.guideline!,
+      documentType: documentType.value,
+    });
+  }
 };
 
 const handleReset = () => {
